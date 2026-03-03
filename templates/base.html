@@ -1,220 +1,159 @@
-<!doctype html>
+{% load static %}
+<!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="utf-8" />
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{% block title %}Heladería{% endblock %}</title>
-
-    <style>
-      :root {
-        --bg: #0b1220;
-        --panel: #111a2e;
-        --panel-2: #0f172a;
-        --text: #e5e7eb;
-        --muted: #9ca3af;
-        --brand: #22c55e;
-        --danger: #ef4444;
-        --warn: #f59e0b;
-        --border: rgba(255, 255, 255, 0.08);
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        font-family:
-          system-ui,
-          -apple-system,
-          Segoe UI,
-          Roboto,
-          Ubuntu,
-          Cantarell,
-          Helvetica,
-          Arial;
-        background: linear-gradient(180deg, var(--bg), #070b14);
-        color: var(--text);
-      }
-      a {
-        color: inherit;
-        text-decoration: none;
-      }
-      .container {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      .topbar {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        background: rgba(7, 11, 20, 0.75);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid var(--border);
-      }
-      .topbar .inner {
-        max-width: 1100px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 14px 20px;
-        gap: 12px;
-      }
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 700;
-        letter-spacing: 0.2px;
-      }
-      .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 99px;
-        background: var(--brand);
-        box-shadow: 0 0 18px rgba(34, 197, 94, 0.6);
-      }
-      .nav {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-      }
-      .nav a {
-        padding: 8px 10px;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.03);
-      }
-      .nav a:hover {
-        border-color: rgba(34, 197, 94, 0.35);
-      }
-      .userbox {
-        font-size: 14px;
-        color: var(--muted);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .pill {
-        padding: 6px 10px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.03);
-        color: var(--text);
-        font-size: 13px;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: 1.6fr 0.9fr;
-        gap: 16px;
-      }
-      @media (max-width: 920px) {
-        .grid {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      .card {
-        border: 1px solid var(--border);
-        background: rgba(17, 26, 46, 0.75);
-        border-radius: 16px;
-        padding: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-      }
-      .card h1,
-      .card h2,
-      .card h3 {
-        margin: 0 0 10px 0;
-      }
-      .muted {
-        color: var(--muted);
-      }
-      .row {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      .btn {
-        cursor: pointer;
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.04);
-        color: var(--text);
-        padding: 10px 12px;
-        border-radius: 12px;
-        font-weight: 600;
-      }
-      .btn:hover {
-        border-color: rgba(34, 197, 94, 0.35);
-      }
-      .btn.primary {
-        background: rgba(34, 197, 94, 0.15);
-        border-color: rgba(34, 197, 94, 0.35);
-      }
-      .btn.danger {
-        background: rgba(239, 68, 68, 0.13);
-        border-color: rgba(239, 68, 68, 0.35);
-      }
-      .btn.warn {
-        background: rgba(245, 158, 11, 0.13);
-        border-color: rgba(245, 158, 11, 0.35);
-      }
-      .field {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        margin: 10px 0;
-      }
-      input,
-      select {
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: rgba(15, 23, 42, 0.65);
-        color: var(--text);
-        outline: none;
-      }
-      input:focus {
-        border-color: rgba(34, 197, 94, 0.35);
-      }
-      .footer {
-        margin-top: 20px;
-        color: var(--muted);
-        font-size: 13px;
-        border-top: 1px solid var(--border);
-        padding-top: 14px;
-      }
-
-      .messages {
-        margin: 0 0 14px 0;
-      }
-      .msg {
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.03);
-        margin-bottom: 8px;
-      }
-    </style>
   </head>
-
   <body>
     <header class="topbar">
       <div class="inner">
-        <div class="brand">
-          <span class="dot"></span>
-          <span>Heladería · Panel</span>
-        </div>
+        <div class="brand"></div>
 
         <nav class="nav">
-          <a href="{% url 'ventas:pos' %}">POS</a>
-          <a href="{% url 'caja:apertura' %}">Apertura</a>
-          <a href="{% url 'caja:arqueo' %}">Arqueo</a>
-          <a href="{% url 'caja:cierre' %}">Cierre</a>
-          <a href="{% url 'reportes:reporte_dia' %}">Reporte día</a>
-          <a href="/admin/">Admin</a>
+          <a href="{% url 'ventas:pos' %}" class="admin-link">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-shopping-bag"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path
+                d="M6.331 8h11.339a2 2 0 0 1 1.977 2.304l-1.255 8.152a3 3 0 0 1 -2.966 2.544h-6.852a3 3 0 0 1 -2.965 -2.544l-1.255 -8.152a2 2 0 0 1 1.977 -2.304"
+              />
+              <path d="M9 11v-5a3 3 0 0 1 6 0v5" />
+            </svg>
+            POS
+          </a>
+          <a href="{% url 'caja:apertura' %}" class="admin-link">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-package"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5" />
+              <path d="M12 12l8 -4.5" />
+              <path d="M12 12l0 9" />
+              <path d="M12 12l-8 -4.5" />
+              <path d="M16 5.25l-8 4.5" />
+            </svg>
+            Apertura
+          </a>
+          <a href="{% url 'caja:arqueo' %}" class="admin-link">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-clipboard-data"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path
+                d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"
+              />
+              <path
+                d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2"
+              />
+              <path d="M9 17v-4" />
+              <path d="M12 17v-1" />
+              <path d="M15 17v-2" />
+              <path d="M12 17v-1" />
+            </svg>
+            Arqueo</a
+          >
+          <a href="{% url 'caja:cierre' %}" class="admin-link">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-package-off"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path
+                d="M8.812 4.793l3.188 -1.793l8 4.5v8.5m-2.282 1.784l-5.718 3.216l-8 -4.5v-9l2.223 -1.25"
+              />
+              <path d="M14.543 10.57l5.457 -3.07" />
+              <path d="M12 12v9" />
+              <path d="M12 12l-8 -4.5" />
+              <path d="M16 5.25l-4.35 2.447m-2.564 1.442l-1.086 .611" />
+              <path d="M3 3l18 18" />
+            </svg>
+            Cierre
+          </a>
+          <a href="{% url 'reportes:reporte_dia' %}" class="admin-link">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-report"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M8 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h5.697" />
+              <path d="M18 14v4h4" />
+              <path d="M18 11v-4a2 2 0 0 0 -2 -2h-2" />
+              <path
+                d="M8 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2"
+              />
+              <path d="M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+              <path d="M8 11h4" />
+              <path d="M8 15h3" />
+            </svg>
+            Reporte día
+          </a>
+          <a href="/admin/" class="admin-link">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-settings"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path
+                d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065"
+              />
+              <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg
+            >Panel Administrador</a
+          >
         </nav>
 
         <div class="userbox">
@@ -237,9 +176,7 @@
       </div>
       {% endif %} {% block content %}{% endblock %}
 
-      <div class="footer">
-        MVP Heladería · Django Templates · Operación de caja
-      </div>
+      <div class="footer"></div>
     </main>
   </body>
 </html>
