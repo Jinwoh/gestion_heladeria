@@ -1,0 +1,35 @@
+{% extends "base.html" %} {% block title %}Arqueo{% endblock %} 
+{% block content%}
+<div class="grid">
+  <section class="card">
+    <h1>Arqueo de Caja</h1>
+    <p class="muted">
+      Pantalla de prueba. Luego muestra totales calculados vs declarado.
+    </p>
+
+    <div
+      class="card"
+      style="margin-top: 14px; background: rgba(15, 23, 42, 0.55)"
+    >
+      <h3>Resumen (demo)</h3>
+      <div class="msg">Total ventas del día: <b>Gs. 0</b></div>
+      <div class="msg">Ingresos/Egresos: <b>Gs. 0</b></div>
+      <div class="msg">Esperado en caja: <b>Gs. 0</b></div>
+    </div>
+
+    <div class="row" style="margin-top: 14px">
+      <a class="btn" href="{% url 'caja:apertura' %}">Apertura</a>
+      <a class="btn danger" href="{% url 'caja:cierre' %}">Cierre</a>
+    </div>
+  </section>
+
+  <aside class="card">
+    <h2>Tips</h2>
+    <p class="muted">
+      Cuando implementemos esto:
+      <br />- selector totales por caja_sesion <br />- comparar esperado vs
+      declarado
+    </p>
+  </aside>
+</div>
+{% endblock %}

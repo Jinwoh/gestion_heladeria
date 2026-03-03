@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{% block title %}Heladería{% endblock %}</title>
+
+    <style>
+      :root {
+        --bg: #0b1220;
+        --panel: #111a2e;
+        --panel-2: #0f172a;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --brand: #22c55e;
+        --danger: #ef4444;
+        --warn: #f59e0b;
+        --border: rgba(255, 255, 255, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Ubuntu,
+          Cantarell,
+          Helvetica,
+          Arial;
+        background: linear-gradient(180deg, var(--bg), #070b14);
+        color: var(--text);
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: rgba(7, 11, 20, 0.75);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+      }
+      .topbar .inner {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        gap: 12px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 99px;
+        background: var(--brand);
+        box-shadow: 0 0 18px rgba(34, 197, 94, 0.6);
+      }
+      .nav {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .nav a {
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .nav a:hover {
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .userbox {
+        font-size: 14px;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.6fr 0.9fr;
+        gap: 16px;
+      }
+      @media (max-width: 920px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        background: rgba(17, 26, 46, 0.75);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      }
+      .card h1,
+      .card h2,
+      .card h3 {
+        margin: 0 0 10px 0;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .btn {
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-weight: 600;
+      }
+      .btn:hover {
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .btn.primary {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .btn.danger {
+        background: rgba(239, 68, 68, 0.13);
+        border-color: rgba(239, 68, 68, 0.35);
+      }
+      .btn.warn {
+        background: rgba(245, 158, 11, 0.13);
+        border-color: rgba(245, 158, 11, 0.35);
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 10px 0;
+      }
+      input,
+      select {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.65);
+        color: var(--text);
+        outline: none;
+      }
+      input:focus {
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .footer {
+        margin-top: 20px;
+        color: var(--muted);
+        font-size: 13px;
+        border-top: 1px solid var(--border);
+        padding-top: 14px;
+      }
+
+      .messages {
+        margin: 0 0 14px 0;
+      }
+      .msg {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.03);
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="inner">
+        <div class="brand">
+          <span class="dot"></span>
+          <span>Heladería · Panel</span>
+        </div>
+
+        <nav class="nav">
+          <a href="{% url 'ventas:pos' %}">POS</a>
+          <a href="{% url 'caja:apertura' %}">Apertura</a>
+          <a href="{% url 'caja:arqueo' %}">Arqueo</a>
+          <a href="{% url 'caja:cierre' %}">Cierre</a>
+          <a href="{% url 'reportes:reporte_dia' %}">Reporte día</a>
+          <a href="/admin/">Admin</a>
+        </nav>
+
+        <div class="userbox">
+          {% if request.user.is_authenticated %}
+          <span class="pill">👤 {{ request.user.username }}</span>
+          <a class="pill" href="/admin/logout/">Salir</a>
+          {% else %}
+          <a class="pill" href="/admin/login/">Ingresar</a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+        <div class="msg">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %} {% block content %}{% endblock %}
+
+      <div class="footer">
+        MVP Heladería · Django Templates · Operación de caja
+      </div>
+    </main>
+  </body>
+</html>

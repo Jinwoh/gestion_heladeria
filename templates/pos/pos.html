@@ -1,0 +1,49 @@
+{% extends "base.html" %} {% block title %}POS{% endblock %} 
+{% block content %}
+<div class="grid">
+  <section class="card">
+    <h1>POS (Punto de Venta)</h1>
+    <p class="muted">
+      Esta es una pantalla de prueba. Luego acá van productos, carrito, total y
+      confirmación.
+    </p>
+
+    <div
+      class="card"
+      style="margin-top: 14px; background: rgba(15, 23, 42, 0.55)"
+    >
+      <h3>Carrito (demo)</h3>
+      <p class="muted">Sin items todavía.</p>
+    </div>
+
+    <div class="row" style="margin-top: 14px">
+      <button class="btn primary" type="button" disabled>
+        Confirmar venta
+      </button>
+      <button class="btn" type="button" disabled>Limpiar</button>
+    </div>
+
+    <p class="muted" style="margin-top: 12px">
+      Próximo paso: cargar productos desde DB + “crear venta” con transacción
+      atómica.
+    </p>
+  </section>
+
+  <aside class="card">
+    <h2>Acciones rápidas</h2>
+    <p class="muted">Navegación para probar rutas.</p>
+
+    <div class="row" style="margin-top: 10px">
+      <a class="btn" href="{% url 'caja:apertura' %}">Ir a apertura</a>
+      <a class="btn warn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
+      <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>
+    </div>
+
+    <div style="margin-top: 14px">
+      <h3 class="muted">Estado (demo)</h3>
+      <div class="msg">Caja: <b>NO IMPLEMENTADO</b></div>
+      <div class="msg">Stock: <b>NO IMPLEMENTADO</b></div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

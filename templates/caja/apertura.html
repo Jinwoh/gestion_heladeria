@@ -1,0 +1,46 @@
+{% extends "base.html" %} {% block title %}Apertura de caja{% endblock %} 
+{% block content %}
+<div class="grid">
+  <section class="card">
+    <h1>Apertura de Caja</h1>
+    <p class="muted">
+      Pantalla de prueba. Luego se conecta al form + service abrir_caja().
+    </p>
+
+    <form method="post" action="">
+      {% csrf_token %}
+
+      <div class="field">
+        <label for="monto">Monto de apertura</label>
+        <input
+          id="monto"
+          name="monto_apertura"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Ej: 100000"
+        />
+      </div>
+
+      <div class="row">
+        <button class="btn primary" type="submit">Abrir caja</button>
+        <a class="btn" href="{% url 'ventas:pos' %}">Volver al POS</a>
+      </div>
+    </form>
+
+    <p class="muted" style="margin-top: 12px">
+      Nota: por ahora el submit no hace nada hasta implementar views + services
+      de caja.
+    </p>
+  </section>
+
+  <aside class="card">
+    <h2>Checklist</h2>
+    <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7">
+      <li>Validar que no exista caja abierta para el usuario</li>
+      <li>Guardar monto de apertura</li>
+      <li>Registrar evento/auditoría</li>
+    </ul>
+  </aside>
+</div>
+{% endblock %}

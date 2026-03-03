@@ -1,0 +1,31 @@
+{% extends "base.html" %} {% block title %}Reporte del día{% endblock %} 
+{% block content %}
+<div class="grid">
+  <section class="card">
+    <h1>Reporte del día</h1>
+    <p class="muted">
+      Pantalla de prueba. Luego mostramos ventas por caja/usuario.
+    </p>
+
+    <div
+      class="card"
+      style="margin-top: 14px; background: rgba(15, 23, 42, 0.55)"
+    >
+      <h3>KPIs (demo)</h3>
+      <div class="msg">Ventas: <b>0</b></div>
+      <div class="msg">Total facturado: <b>Gs. 0</b></div>
+      <div class="msg">Ticket promedio: <b>Gs. 0</b></div>
+    </div>
+
+    <div class="row" style="margin-top: 14px">
+      <a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>
+      <a class="btn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
+    </div>
+  </section>
+
+  <aside class="card">
+    <h2>Exportación</h2>
+    <p class="muted">Luego: exportar CSV/PDF o imprimir.</p>
+  </aside>
+</div>
+{% endblock %}

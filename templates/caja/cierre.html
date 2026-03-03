@@ -1,0 +1,40 @@
+{% extends "base.html" %} {% block title %}Cierre de caja{% endblock %} 
+{% block content %}
+<div class="grid">
+  <section class="card">
+    <h1>Cierre de Caja</h1>
+    <p class="muted">Pantalla de prueba. Luego ejecuta cerrar_caja().</p>
+
+    <form method="post" action="">
+      {% csrf_token %}
+
+      <div class="field">
+        <label for="monto">Monto de cierre declarado</label>
+        <input
+          id="monto"
+          name="monto_cierre"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Ej: 250000"
+        />
+      </div>
+
+      <div class="row">
+        <button class="btn danger" type="submit">Cerrar caja</button>
+        <a class="btn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
+      </div>
+    </form>
+
+    <p class="muted" style="margin-top: 12px">
+      Regla: no cerrar caja si no está abierta.
+    </p>
+  </section>
+
+  <aside class="card">
+    <h2>Resumen (demo)</h2>
+    <div class="msg">Caja abierta: <b>NO IMPLEMENTADO</b></div>
+    <div class="msg">Esperado: <b>Gs. 0</b></div>
+  </aside>
+</div>
+{% endblock %}
