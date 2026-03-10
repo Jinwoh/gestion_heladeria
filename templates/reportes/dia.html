@@ -1,31 +1,72 @@
-{% extends "base.html" %} {% block title %}Reporte del día{% endblock %} 
+{% extends "base.html" %}
+{% block title %}Reporte del día{% endblock %}
+
 {% block content %}
-<div class="grid">
-  <section class="card">
-    <h1>Reporte del día</h1>
-    <p class="muted">
-      Pantalla de prueba. Luego mostramos ventas por caja/usuario.
-    </p>
+  <div class="grid">
+    <section class="card">
+      <h1>Reporte del día</h1>
+      <p class="muted">
+        Fecha: <b>{{ kpis.fecha }}</b> ·
+        Alcance: <b>{% if puede_ver_global %}GLOBAL{% else %}MIS VENTAS{% endif %}</b>
+      </p>
 
-    <div
-      class="card"
-      style="margin-top: 14px; background: rgba(15, 23, 42, 0.55)"
-    >
-      <h3>KPIs (demo)</h3>
-      <div class="msg">Ventas: <b>0</b></div>
-      <div class="msg">Total facturado: <b>Gs. 0</b></div>
-      <div class="msg">Ticket promedio: <b>Gs. 0</b></div>
-    </div>
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>KPIs</h3>
+        <div class="msg">Ventas: <b>{{ kpis.cantidad_ventas }}</b></div>
+        <div class="msg">Total facturado: <b>{{ kpis.total_facturado }}</b></div>
+        <div class="msg">Ticket promedio: <b>{{ kpis.ticket_promedio }}</b></div>
+      </div>
 
-    <div class="row" style="margin-top: 14px">
-      <a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>
-      <a class="btn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
-    </div>
-  </section>
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Últimas ventas</h3>
 
-  <aside class="card">
-    <h2>Exportación</h2>
-    <p class="muted">Luego: exportar CSV/PDF o imprimir.</p>
-  </aside>
-</div>
+        {% if ventas %}
+          <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">ID</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Hora</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Cajero</th>
+                  <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Total</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Items</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for v in ventas %}
+                  <tr>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)"><b>#{{ v.id }}</b></td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)" class="muted">{{ v.fecha|date:"H:i" }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.usuario.username }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ v.total }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {% for d in v.detalles.all %}
+                        <span class="pill">{{ d.producto.nombre }} x{{ d.cantidad }}</span>
+                      {% endfor %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="muted">No hay ventas confirmadas hoy.</p>
+        {% endif %}
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>
+        <a class="btn warn" href="{% url 'caja:arqueo' %}">Arqueo</a>
+      </div>
+    </section>
+
+    <aside class="card">
+      <h2>Notas</h2>
+      <p class="muted">
+        Si querés que el reporte sea global solo para supervisores:
+        asigná el permiso <b>ventas.view_venta</b> al grupo “Supervisor”.
+      </p>
+      <div class="msg">Admin → Groups → Permissions → “Ventas | Can view venta”</div>
+    </aside>
+  </div>
 {% endblock %}

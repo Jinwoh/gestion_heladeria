@@ -1,63 +1,100 @@
-{% extends "base.html" %} {% block title %}POS{% endblock %} {% block content %}
-<div class="grid">
-  <section class="card">
-    <h1>Punto de Venta</h1>
-    <p class="muted"></p>
+{% extends "base.html" %}
+{% block title %}POS{% endblock %}
+{% load pos_extras %}
 
-    <div
-      class="card"
-      style="margin-top: 14px; background: rgba(15, 23, 42, 0.55)"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="icon icon-tabler icons-tabler-outline icon-tabler-shopping-cart"
-      >
-        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-        <path d="M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-        <path d="M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
-        <path d="M17 17h-11v-14h-2" />
-        <path d="M6 5l14 1l-1 7h-13" />
-      </svg>
-      <h3 style="display: inline">Carrito (demo)</h3>
-      <p class="muted">Sin items todavía.</p>
-    </div>
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      <h1>POS (Punto de Venta)</h1>
 
-    <div class="row" style="margin-top: 14px">
-      <button class="btn primary" type="button" disabled>
-        Confirmar venta
-      </button>
-      <button class="btn" type="button" disabled>Limpiar</button>
-    </div>
+      {% if caja %}
+        <div class="msg">
+          Caja abierta: <b>ID {{ caja.id }}</b> · Apertura: <b>{{ caja.monto_apertura }}</b> · {{ caja.fecha_apertura }}
+        </div>
+      {% else %}
+        <div class="msg">
+          No hay caja abierta. <a class="pill" href="{% url 'caja:apertura' %}">Abrir caja</a>
+        </div>
+      {% endif %}
 
-    <p class="muted" style="margin-top: 12px">
-      Próximo paso: cargar productos desde DB + “crear venta” con transacción
-      atómica.
-    </p>
-  </section>
+      <form method="post" style="margin-top:14px">
+        {% csrf_token %}
 
-  <aside class="card">
-    <h2>Acciones rápidas</h2>
-    <p class="muted">Navegación para probar rutas.</p>
+        <div class="card" style="background:rgba(15,23,42,.55)">
+          <h3>Productos</h3>
 
-    <div class="row" style="margin-top: 10px">
-      <a class="btn" href="{% url 'caja:apertura' %}">Ir a apertura</a>
-      <a class="btn warn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
-      <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>
-    </div>
+          {% if productos %}
+            <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
+              <table style="width:100%;border-collapse:collapse">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Producto</th>
+                    <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Categoría</th>
+                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Precio</th>
+                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Stock</th>
+                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Cantidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for p in productos %}
+                    <tr>
+                      <td style="padding:10px;border-bottom:1px solid var(--border)">
+                        <input type="hidden" name="producto_id" value="{{ p.id }}">
+                        <b>{{ p.nombre }}</b>
+                      </td>
+                      <td style="padding:10px;border-bottom:1px solid var(--border)" class="muted">
+                        {{ p.categoria.nombre }}
+                      </td>
+                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                        {{ p.precio }}
+                      </td>
+                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                        {{ stock_map|get_item:p.id|default:"0" }}
+                      </td>
+                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                        <input
+                          name="cantidad"
+                          type="number"
+                          min="0"
+                          value="0"
+                          style="width:110px;text-align:right"
+                          {% if not caja %}disabled{% endif %}
+                        />
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="muted">No hay productos activos.</p>
+          {% endif %}
+        </div>
 
-    <div style="margin-top: 14px">
-      <h3 class="muted">Estado (demo)</h3>
-      <div class="msg">Caja: <b>NO IMPLEMENTADO</b></div>
-      <div class="msg">Stock: <b>NO IMPLEMENTADO</b></div>
-    </div>
-  </aside>
-</div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn primary" type="submit" {% if not caja %}disabled{% endif %}>Confirmar venta</button>
+          <a class="btn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
+          <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>
+        </div>
+
+        <p class="muted" style="margin-top:12px">
+          Nota: Si el stock no alcanza, la venta falla y no se guarda nada (transacción atómica).
+        </p>
+      </form>
+    </section>
+
+    <aside class="card">
+      <h2>Atajos</h2>
+      <div class="row" style="margin-top:10px">
+        <a class="btn" href="/admin/">Admin</a>
+        <a class="btn" href="{% url 'reportes:reporte_dia' %}">Reporte día</a>
+      </div>
+
+      <div style="margin-top:14px">
+        <h3 class="muted">Reglas</h3>
+        <div class="msg">No se vende sin caja abierta.</div>
+        <div class="msg">Venta = Venta + Detalles + Stock + MovimientoCaja (todo o nada).</div>
+      </div>
+    </aside>
+  </div>
 {% endblock %}
