@@ -1,40 +1,52 @@
-{% extends "base.html" %} {% block title %}Cierre de caja{% endblock %} 
+{% extends "base.html" %}
+{% block title %}Cierre de caja{% endblock %}
+
 {% block content %}
-<div class="grid">
-  <section class="card">
-    <h1>Cierre de Caja</h1>
-    <p class="muted">Pantalla de prueba. Luego ejecuta cerrar_caja().</p>
+  <div class="grid">
+    <section class="card">
+      <h1>Cierre de Caja</h1>
 
-    <form method="post" action="">
-      {% csrf_token %}
-
-      <div class="field">
-        <label for="monto">Monto de cierre declarado</label>
-        <input
-          id="monto"
-          name="monto_cierre"
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="Ej: 250000"
-        />
+      <div class="msg">
+        Caja ID <b>{{ caja.id }}</b> · Apertura: <b>{{ caja.monto_apertura }}</b> · {{ caja.fecha_apertura }}
       </div>
 
-      <div class="row">
-        <button class="btn danger" type="submit">Cerrar caja</button>
-        <a class="btn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Resumen</h3>
+        <div class="msg">Total ventas: <b>{{ total_ventas }}</b></div>
+        <div class="msg">Total ingresos: <b>{{ total_ingresos }}</b></div>
+        <div class="msg">Total egresos: <b>{{ total_egresos }}</b></div>
+        <div class="msg">Esperado en caja: <b>{{ esperado }}</b></div>
       </div>
-    </form>
 
-    <p class="muted" style="margin-top: 12px">
-      Regla: no cerrar caja si no está abierta.
-    </p>
-  </section>
+      <form method="post" style="margin-top:14px">
+        {% csrf_token %}
 
-  <aside class="card">
-    <h2>Resumen (demo)</h2>
-    <div class="msg">Caja abierta: <b>NO IMPLEMENTADO</b></div>
-    <div class="msg">Esperado: <b>Gs. 0</b></div>
-  </aside>
-</div>
+        <div class="field">
+          <label>{{ form.monto_cierre.label }}</label>
+          {{ form.monto_cierre }}
+          {% for err in form.monto_cierre.errors %}
+            <div class="msg">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="row">
+          <button class="btn danger" type="submit">Cerrar caja</button>
+          <a class="btn warn" href="{% url 'caja:arqueo' %}">Volver a arqueo</a>
+        </div>
+      </form>
+
+      <p class="muted" style="margin-top:12px">
+        Regla: no se puede cerrar si no hay caja abierta. Al cerrar, se bloquean ventas.
+      </p>
+    </section>
+
+    <aside class="card">
+      <h2>Estado</h2>
+      <div class="msg">Caja abierta: <b>SÍ</b></div>
+      <div class="msg">Esperado: <b>{{ esperado }}</b></div>
+      <p class="muted" style="margin-top:10px">
+        Diferencia = Declarado - Esperado (se muestra al cerrar).
+      </p>
+    </aside>
+  </div>
 {% endblock %}

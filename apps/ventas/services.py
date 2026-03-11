@@ -66,12 +66,12 @@ def crear_venta(*, usuario, items: list[dict]) -> Venta:
 
     # Movimiento de caja (VENTA)
     MovimientoCaja.objects.create(
-        caja_sesion=caja,
-        tipo=MovimientoCaja.Tipo.VENTA,
-        monto=total,
-        referencia=f"venta:{venta.id}",
-        motivo="Venta POS",
-        usuario=usuario,
+    caja_sesion=caja,
+    tipo=MovimientoCaja.Tipo.VENTA,
+    monto=total,
+    referencia=f"venta:{venta.id}",
+    motivo="Venta POS",
+    usuario=usuario,
     )
 
     return venta

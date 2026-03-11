@@ -1,35 +1,41 @@
-{% extends "base.html" %} {% block title %}Arqueo{% endblock %} 
-{% block content%}
-<div class="grid">
-  <section class="card">
-    <h1>Arqueo de Caja</h1>
-    <p class="muted">
-      Pantalla de prueba. Luego muestra totales calculados vs declarado.
-    </p>
+{% extends "base.html" %}
+{% block title %}Arqueo{% endblock %}
 
-    <div
-      class="card"
-      style="margin-top: 14px; background: rgba(15, 23, 42, 0.55)"
-    >
-      <h3>Resumen (demo)</h3>
-      <div class="msg">Total ventas: <b>{{ total_ventas }}</b></div>
-      <div class="msg">Esperado en caja: <b>{{ esperado }}</b></div>
-      <div class="msg">Ingresos/Egresos: <b>Gs. 0</b></div>
-    </div>
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      <h1>Arqueo de Caja</h1>
 
-    <div class="row" style="margin-top: 14px">
-      <a class="btn" href="{% url 'caja:apertura' %}">Apertura</a>
-      <a class="btn danger" href="{% url 'caja:cierre' %}">Cierre</a>
-    </div>
-  </section>
+      <div class="msg">
+        Caja ID <b>{{ caja.id }}</b> · Abierta: <b>{{ caja.fecha_apertura }}</b> · Apertura: <b>{{ caja.monto_apertura }}</b>
+      </div>
 
-  <aside class="card">
-    <h2>Tips</h2>
-    <p class="muted">
-      Cuando implementemos esto:
-      <br />- selector totales por caja_sesion <br />- comparar esperado vs
-      declarado
-    </p>
-  </aside>
-</div>
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Resumen</h3>
+        <div class="msg">Total ventas: <b>{{ total_ventas }}</b></div>
+        <div class="msg">Total ingresos: <b>{{ total_ingresos }}</b></div>
+        <div class="msg">Total egresos: <b>{{ total_egresos }}</b></div>
+        <div class="msg">Esperado en caja: <b>{{ esperado }}</b></div>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>
+        <a class="btn danger" href="{% url 'caja:cierre' %}">Cerrar caja</a>
+      </div>
+    </section>
+
+    <aside class="card">
+      <h2>Últimos movimientos</h2>
+      {% if movimientos %}
+        {% for m in movimientos %}
+          <div class="msg">
+            <b>{{ m.tipo }}</b> · {{ m.monto }}<br>
+            <span class="muted">{{ m.creado_en }} · {{ m.referencia }} · {{ m.motivo }}</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">Sin movimientos.</p>
+      {% endif %}
+    </aside>
+  </div>
 {% endblock %}

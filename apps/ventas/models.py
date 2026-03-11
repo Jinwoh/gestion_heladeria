@@ -61,9 +61,10 @@ class Venta(models.Model):
         return f"Venta {self.id} - {self.total} - {self.estado}"
 
 
+
 class VentaDetalle(models.Model):
-    venta = models.ForeignKey(Venta, on_delete=models.CASCADE, related_name="detalles")
-    producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
+    venta = models.ForeignKey("ventas.Venta", on_delete=models.CASCADE, related_name="detalles")
+    producto = models.ForeignKey("productos.Producto", on_delete=models.PROTECT)  # ✅
 
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
