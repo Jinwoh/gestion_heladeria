@@ -19,7 +19,7 @@ def crear_venta(*, usuario, items: list[dict]) -> Venta:
     if not caja:
         raise ValidationError("No hay caja abierta. Abrí caja antes de vender.")
 
-    # Limpiar items inválidos
+    
     clean_items = []
     for it in items:
         pid = int(it.get("producto_id"))
@@ -30,7 +30,7 @@ def crear_venta(*, usuario, items: list[dict]) -> Venta:
     if not clean_items:
         raise ValidationError("No hay productos con cantidad > 0.")
 
-    # Traer productos de una vez
+    
     productos = Producto.objects.filter(id__in=[i["producto_id"] for i in clean_items], activo=True)
     productos_map = {p.id: p for p in productos}
 
@@ -41,7 +41,7 @@ def crear_venta(*, usuario, items: list[dict]) -> Venta:
 
     total = Decimal("0")
 
-    # Crear detalles + descontar stock
+    
     for it in clean_items:
         producto = productos_map[it["producto_id"]]
         cantidad = it["cantidad"]

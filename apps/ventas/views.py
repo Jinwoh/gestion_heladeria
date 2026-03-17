@@ -2,13 +2,10 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
-
 from apps.productos.models import Producto
 from apps.inventario.models import Stock
 from apps.caja.services import get_caja_abierta
-
 from .services import crear_venta
-
 
 @login_required
 def pos_view(request):
