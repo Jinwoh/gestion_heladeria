@@ -9,78 +9,160 @@
 
       {% if caja %}
         <div class="msg">
-          Caja abierta: <b>ID {{ caja.id }}</b> · Apertura: <b>{{ caja.monto_apertura }}</b> · {{ caja.fecha_apertura }}
+          Caja abierta:
+          <b>ID {{ caja.id }}</b>
+          · Apertura: <b>{{ caja.monto_apertura }}</b>
+          · {{ caja.fecha_apertura }}
         </div>
       {% else %}
         <div class="msg">
-          No hay caja abierta. <a class="pill" href="{% url 'caja:apertura' %}">Abrir caja</a>
+          No hay caja abierta.
+          <a class="pill" href="{% url 'caja:apertura' %}">Abrir caja</a>
         </div>
       {% endif %}
 
-      <form method="post" style="margin-top:14px">
-        {% csrf_token %}
+      <div class="card" style="margin-top:14px; background:rgba(15,23,42,.55)">
+        <h3>Productos</h3>
 
-        <div class="card" style="background:rgba(15,23,42,.55)">
-          <h3>Productos</h3>
-
-          {% if productos %}
-            <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
-              <table style="width:100%;border-collapse:collapse">
-                <thead>
+        {% if productos %}
+          <div style="overflow:auto; border:1px solid var(--border); border-radius:12px">
+            <table style="width:100%; border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Producto</th>
+                  <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Categoría</th>
+                  <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Precio</th>
+                  <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Stock</th>
+                  <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Cantidad</th>
+                  <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in productos %}
                   <tr>
-                    <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Producto</th>
-                    <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Categoría</th>
-                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Precio</th>
-                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Stock</th>
-                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Cantidad</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for p in productos %}
-                    <tr>
-                      <td style="padding:10px;border-bottom:1px solid var(--border)">
+                    <td style="padding:10px; border-bottom:1px solid var(--border)">
+                      <b>{{ p.nombre }}</b>
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border)" class="muted">
+                      {{ p.categoria.nombre }}
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                      {{ p.precio }}
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                      {{ stock_map|get_item:p.id|default:"0" }}
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                      <form method="post" class="row" style="justify-content:flex-end; margin:0">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add">
                         <input type="hidden" name="producto_id" value="{{ p.id }}">
-                        <b>{{ p.nombre }}</b>
-                      </td>
-                      <td style="padding:10px;border-bottom:1px solid var(--border)" class="muted">
-                        {{ p.categoria.nombre }}
-                      </td>
-                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
-                        {{ p.precio }}
-                      </td>
-                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
-                        {{ stock_map|get_item:p.id|default:"0" }}
-                      </td>
-                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
                         <input
                           name="cantidad"
                           type="number"
-                          min="0"
-                          value="0"
-                          style="width:110px;text-align:right"
+                          min="1"
+                          value="1"
+                          style="width:90px; text-align:right"
                           {% if not caja %}disabled{% endif %}
                         />
-                      </td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          {% else %}
-            <p class="muted">No hay productos activos.</p>
-          {% endif %}
-        </div>
-
-        <div class="row" style="margin-top:14px">
-          <button class="btn primary" type="submit" {% if not caja %}disabled{% endif %}>Confirmar venta</button>
-          <a class="btn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
-          <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>
-        </div>
-
-        <p class="muted" style="margin-top:12px">
-          Nota: Si el stock no alcanza, la venta falla y no se guarda nada (transacción atómica).
-        </p>
-      </form>
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                        <button class="btn" type="submit" {% if not caja %}disabled{% endif %}>
+                          Agregar
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="muted">No hay productos activos.</p>
+        {% endif %}
+      </div>
     </section>
+
+    <aside class="card">
+      <h2>Carrito</h2>
+
+      {% if carrito_items %}
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px">
+          {% for item in carrito_items %}
+            <div style="border:1px solid var(--border); border-radius:12px; padding:12px; background:rgba(255,255,255,.03)">
+              <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start">
+                <div>
+                  <b>{{ item.nombre }}</b>
+                  <div class="muted" style="margin-top:4px">{{ item.categoria }}</div>
+                  <div class="muted" style="margin-top:4px">
+                    Precio: {{ item.precio }} · Stock: {{ item.stock }}
+                  </div>
+                </div>
+                <div style="text-align:right">
+                  <div><b>{{ item.subtotal }}</b></div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:12px; justify-content:space-between">
+                <form method="post" class="row" style="margin:0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update">
+                  <input type="hidden" name="producto_id" value="{{ item.producto_id }}">
+                  <input
+                    type="number"
+                    name="cantidad"
+                    min="0"
+                    value="{{ item.cantidad }}"
+                    style="width:90px; text-align:right"
+                  >
+                  <button class="btn" type="submit">Actualizar</button>
+                </form>
+
+                <form method="post" style="margin:0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove">
+                  <input type="hidden" name="producto_id" value="{{ item.producto_id }}">
+                  <button class="btn danger" type="submit">Quitar</button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border)">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px">
+            <span style="font-size:1.05rem"><b>Total</b></span>
+            <span style="font-size:1.2rem"><b>{{ carrito_total }}</b></span>
+          </div>
+
+          <div class="row">
+            <form method="post" style="margin:0">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="confirm">
+              <button class="btn primary" type="submit">Confirmar venta</button>
+            </form>
+
+            <form method="post" style="margin:0">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="clear">
+              <button class="btn warn" type="submit">Vaciar carrito</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <p class="muted" style="margin-top:14px">
+          El carrito está vacío.
+        </p>
+      {% endif %}
+
+      <div class="row" style="margin-top:16px">
+        <a class="btn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
+        <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>
+      </div>
+
+      <p class="muted" style="margin-top:12px">
+        Si el stock no alcanza, la venta falla y no se guarda nada.
+      </p>
+    </aside>
   </div>
 {% endblock %}
