@@ -26,7 +26,7 @@ def apertura_caja(request):
                 messages.success(request, "Caja abierta correctamente.")
                 return redirect("caja:arqueo")
             except ValidationError as e:
-                messages.error(request, e.message)
+                messages.error(request, str(e.message))
         else:
             messages.error(request, "Formulario inválido. Revisá los campos.")
     else:
@@ -45,7 +45,7 @@ def arqueo_caja(request):
         )
         return redirect("caja:apertura")
 
-    movs = caja.movimientos.all()
+    movs = caja.movimientos.all()  # Assuming 'movimiento_set' is the related name for MovimientoCaja
 
     total_ingresos = movs.filter(tipo=MovimientoCaja.Tipo.INGRESO).aggregate(s=Sum("monto"))["s"] or Decimal("0")
     total_egresos  = movs.filter(tipo=MovimientoCaja.Tipo.EGRESO).aggregate(s=Sum("monto"))["s"] or Decimal("0")
@@ -84,24 +84,16 @@ def cierre_caja(request):
         form = CierreCajaForm(request.POST)
         if form.is_valid():
             try:
-                cierre = cerrar_caja(
-                    caja=caja,
-                    monto_cierre=form.cleaned_data["monto_cierre"],
-                    notas=form.cleaned_data.get("notas", ""),
+                cerrar_caja(
+                    usuario=request.user,
+                    monto_cierre_declarado=form.cleaned_data["monto_cierre"],
                 )
 
-                esperado = cierre.saldo_esperado
-                declarado = cierre.monto_cierre
-                diferencia = declarado - esperado
-
-                messages.success(
-                    request,
-                    f"La caja se cerró correctamente. Diferencia final: {diferencia}."
-                )
-                return redirect("caja:arqueo")
+                messages.success(request, "La caja se cerró correctamente.")
+                return redirect("core:home")
 
             except ValidationError as e:
-                messages.error(request, e.message)
+                messages.error(request, str(e))
         else:
             messages.error(request, "Formulario inválido. Revisá el monto de cierre.")
     else:
