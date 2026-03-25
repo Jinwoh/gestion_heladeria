@@ -50,7 +50,7 @@ def pos_view(request):
         action = request.POST.get("action")
 
         if action in {"add", "update", "remove", "clear", "confirm"} and not caja:
-            messages.error(request, "No hay caja abierta. Abrí caja antes de operar en el POS.")
+            messages.error(request, "La caja está cerrada. Debes abrir una caja antes de operar en el POS.")
             return redirect("caja:apertura")
 
         if action == "add":
@@ -75,11 +75,16 @@ def pos_view(request):
             nueva_cantidad = cantidad_actual + cantidad
 
             if nueva_cantidad > stock_disponible:
-                messages.error(
-                    request,
-                    f"No hay stock suficiente para '{producto.nombre}'. "
-                    f"Disponible: {stock_disponible}."
-                )
+                if stock_disponible <= 0:
+                    messages.error(
+                        request,
+                        f"'{producto.nombre}' no tiene existencias disponibles."
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f"Stock insuficiente para '{producto.nombre}'. Disponible: {stock_disponible}."
+                    )
                 return redirect("ventas:pos")
 
             cart[str(producto_id)] = nueva_cantidad
@@ -107,15 +112,20 @@ def pos_view(request):
             if cantidad <= 0:
                 cart.pop(str(producto_id), None)
                 _save_cart(request.session, cart)
-                messages.success(request, f"Se quitó '{producto.nombre}' del carrito.")
+                messages.info(request, f"Se quitó '{producto.nombre}' del carrito.")
                 return redirect("ventas:pos")
 
             if cantidad > stock_disponible:
-                messages.error(
-                    request,
-                    f"No hay stock suficiente para '{producto.nombre}'. "
-                    f"Disponible: {stock_disponible}."
-                )
+                if stock_disponible <= 0:
+                    messages.error(
+                        request,
+                        f"'{producto.nombre}' ya no tiene existencias disponibles."
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f"Stock insuficiente para '{producto.nombre}'. Disponible: {stock_disponible}."
+                    )
                 return redirect("ventas:pos")
 
             cart[str(producto_id)] = cantidad
@@ -135,14 +145,14 @@ def pos_view(request):
             _save_cart(request.session, cart)
 
             if producto:
-                messages.success(request, f"Se quitó '{producto.nombre}' del carrito.")
+                messages.info(request, f"Se quitó '{producto.nombre}' del carrito.")
             else:
-                messages.success(request, "Se quitó el producto del carrito.")
+                messages.info(request, "Se quitó el producto del carrito.")
             return redirect("ventas:pos")
 
         elif action == "clear":
             _clear_cart(request.session)
-            messages.success(request, "Carrito vaciado.")
+            messages.warning(request, "El carrito fue vaciado.")
             return redirect("ventas:pos")
 
         elif action == "confirm":

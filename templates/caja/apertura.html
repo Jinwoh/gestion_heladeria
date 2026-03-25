@@ -6,6 +6,7 @@
     <h1>Apertura de Caja</h1>
 
     {% if caja %}
+    
       <div class="msg">Ya hay una caja abierta (ID {{ caja.id }}).</div>
       <a class="btn warn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
       <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>

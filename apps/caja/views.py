@@ -39,7 +39,10 @@ def apertura_caja(request):
 def arqueo_caja(request):
     caja = get_caja_abierta(request.user)
     if not caja:
-        messages.warning(request, "No hay caja abierta. Abrí una caja para comenzar.")
+        messages.warning(
+            request,
+            "La caja está cerrada. Debes abrir una caja para continuar."
+        )
         return redirect("caja:apertura")
 
     movs = caja.movimientos.all()
@@ -69,35 +72,38 @@ def arqueo_caja(request):
 @login_required
 def cierre_caja(request):
     caja = get_caja_abierta(request.user)
+
     if not caja:
-        messages.warning(request, "No hay caja abierta para cerrar.")
+        messages.warning(
+            request,
+            "La caja está cerrada o no existe una caja abierta para cerrar."
+        )
         return redirect("caja:apertura")
-
-    movs = caja.movimientos.all()
-
-    total_ingresos = movs.filter(tipo=MovimientoCaja.Tipo.INGRESO).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-    total_egresos  = movs.filter(tipo=MovimientoCaja.Tipo.EGRESO).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-    total_ventas   = movs.filter(tipo=MovimientoCaja.Tipo.VENTA).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    esperado = caja.monto_apertura + total_ingresos + total_ventas - total_egresos
 
     if request.method == "POST":
         form = CierreCajaForm(request.POST)
         if form.is_valid():
             try:
-                cerrar_caja(
-                    usuario=request.user,
-                    monto_cierre_declarado=form.cleaned_data["monto_cierre"],
+                cierre = cerrar_caja(
+                    caja=caja,
+                    monto_cierre=form.cleaned_data["monto_cierre"],
+                    notas=form.cleaned_data.get("notas", ""),
                 )
 
-                diferencia = form.cleaned_data["monto_cierre"] - esperado
+                esperado = cierre.saldo_esperado
+                declarado = cierre.monto_cierre
+                diferencia = declarado - esperado
+
                 messages.success(
                     request,
-                    f"Caja cerrada. Esperado: {esperado} | Declarado: {form.cleaned_data['monto_cierre']} | Diferencia: {diferencia}"
+                    f"La caja se cerró correctamente. Diferencia final: {diferencia}."
                 )
-                return redirect("reportes:reporte_dia")
+                return redirect("caja:arqueo")
+
             except ValidationError as e:
                 messages.error(request, e.message)
+        else:
+            messages.error(request, "Formulario inválido. Revisá el monto de cierre.")
     else:
         form = CierreCajaForm()
 
@@ -107,9 +113,5 @@ def cierre_caja(request):
         {
             "form": form,
             "caja": caja,
-            "esperado": esperado,
-            "total_ingresos": total_ingresos,
-            "total_egresos": total_egresos,
-            "total_ventas": total_ventas,
         },
     )
