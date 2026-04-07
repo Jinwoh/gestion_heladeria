@@ -319,7 +319,7 @@
 
             <div class="userbox">
               {% if request.user.is_authenticated %}
-                <span class="pill">👤 {{ request.user.username }}</span>
+                <span class="pill-user">👤 {{ request.user.username }}</span>
 
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
                   {% csrf_token %}

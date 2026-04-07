@@ -194,6 +194,10 @@ a {
 .logout-form {
   display: inline;
   margin: 0;
+  cursor: pointer;
+}
+.pill:hover {
+    border-color: rgba(34, 197, 94, 0.35);
 }
 
 .pill {
@@ -214,6 +218,19 @@ button.pill {
   appearance: none;
   -webkit-appearance: none;
 }
+.pill-user {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: transparent;
+    color: #fff;
+    text-decoration: none;
+    font: inherit;
+}
+
 
 .grid {
     display: grid;
