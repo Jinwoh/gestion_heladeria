@@ -1,0 +1,61 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <title>Iniciar sesión</title>
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="form-container sign-in">
+            <form method="post">
+                {% csrf_token %}
+
+                <h1>Iniciar Sesión</h1>
+                <span>Introduce tu usuario y contraseña</span>
+
+                {% if form.errors %}
+                    <div class="form-error" style="color: #ff4d4f; margin: 10px 0;">
+                        Usuario o contraseña incorrectos.
+                    </div>
+                {% endif %}
+
+                <input 
+                    type="text" 
+                    name="username" 
+                    id="id_username" 
+                    placeholder="Usuario"
+                    value="{{ form.username.value|default_if_none:'' }}"
+                    required
+                >
+
+                <input 
+                    type="password" 
+                    name="password" 
+                    id="id_password" 
+                    placeholder="Contraseña"
+                    required
+                >
+
+                <button type="submit">Iniciar Sesión</button>
+            </form>
+        </div>
+
+        <div class="toggle-container">
+            <div class="toggle">
+                <div class="toggle-panel toggle-left">
+                    <h1>Bienvenido</h1>
+                    <button class="hidden" id="login" type="button">Iniciar Sesión</button>
+                </div>
+                <div class="toggle-panel toggle-right">
+                    <h1>Bienvenido</h1>
+                    <p>Accede al sistema de gestión de la heladería</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,14 +1,11 @@
 from decimal import Decimal
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
-
 from apps.caja.services import get_caja_abierta
 from apps.inventario.models import Stock
 from apps.productos.models import Producto
-
 from .services import crear_venta
 
 

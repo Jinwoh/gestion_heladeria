@@ -186,21 +186,33 @@ a {
 }
 
 .userbox {
-    font-size: 14px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logout-form {
+  display: inline;
+  margin: 0;
 }
 
 .pill {
-    padding: 6px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.03);
-    color: var(--text);
-    font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+button.pill {
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .grid {
