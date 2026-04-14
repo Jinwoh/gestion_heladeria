@@ -11,7 +11,7 @@
       </p>
 
       <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
-        <h3>KPIs</h3>
+        <h3></h3>
         <div class="msg">Ventas: <b>{{ kpis.cantidad_ventas }}</b></div>
         <div class="msg">Total facturado: <b>{{ kpis.total_facturado }}</b></div>
         <div class="msg">Ticket promedio: <b>{{ kpis.ticket_promedio }}</b></div>
@@ -59,14 +59,5 @@
         <a class="btn warn" href="{% url 'caja:arqueo' %}">Arqueo</a>
       </div>
     </section>
-
-    <aside class="card">
-      <h2>Notas</h2>
-      <p class="muted">
-        Si querés que el reporte sea global solo para supervisores:
-        asigná el permiso <b>ventas.view_venta</b> al grupo “Supervisor”.
-      </p>
-      <div class="msg">Admin → Groups → Permissions → “Ventas | Can view venta”</div>
-    </aside>
   </div>
 {% endblock %}

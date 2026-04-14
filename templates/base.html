@@ -320,10 +320,9 @@
             <div class="userbox">
               {% if request.user.is_authenticated %}
                 <span class="pill-user">👤 {{ request.user.username }}</span>
-
                 <form method="post" action="{% url 'logout' %}" class="logout-form">
-                  {% csrf_token %}
-                  <button type="submit" class="pill">Salir</button>
+                    {% csrf_token %}
+                    <button type="submit" class="pill">Salir</button>
                 </form>
               {% else %}
                 <a class="pill" href="{% url 'login' %}">Ingresar</a>

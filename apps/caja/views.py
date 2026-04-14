@@ -38,6 +38,7 @@ def apertura_caja(request):
 @login_required
 def arqueo_caja(request):
     caja = get_caja_abierta(request.user)
+
     if not caja:
         messages.warning(
             request,
@@ -47,11 +48,20 @@ def arqueo_caja(request):
 
     movs = caja.movimientos.all()
 
-    total_ingresos = movs.filter(tipo=MovimientoCaja.Tipo.INGRESO).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-    total_egresos  = movs.filter(tipo=MovimientoCaja.Tipo.EGRESO).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-    total_ventas   = movs.filter(tipo=MovimientoCaja.Tipo.VENTA).aggregate(s=Sum("monto"))["s"] or Decimal("0")
+    total_ingresos = movs.filter(
+        tipo=MovimientoCaja.Tipo.INGRESO
+    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
 
-    esperado = caja.monto_apertura + total_ingresos + total_ventas - total_egresos
+    total_egresos = movs.filter(
+        tipo=MovimientoCaja.Tipo.EGRESO
+    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
+
+    total_ventas = movs.filter(
+        tipo=MovimientoCaja.Tipo.VENTA
+    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
+
+    # OJO: la apertura ya se registra como INGRESO en services.py
+    esperado = total_ingresos + total_ventas - total_egresos
 
     return render(
         request,
@@ -67,8 +77,6 @@ def arqueo_caja(request):
     )
 
 
-
-
 @login_required
 def cierre_caja(request):
     caja = get_caja_abierta(request.user)
@@ -80,25 +88,40 @@ def cierre_caja(request):
         )
         return redirect("caja:apertura")
 
+    movs = caja.movimientos.all()
+
+    total_ingresos = movs.filter(
+        tipo=MovimientoCaja.Tipo.INGRESO
+    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
+
+    total_egresos = movs.filter(
+        tipo=MovimientoCaja.Tipo.EGRESO
+    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
+
+    total_ventas = movs.filter(
+        tipo=MovimientoCaja.Tipo.VENTA
+    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
+
+    # OJO: la apertura ya se registra como INGRESO en services.py
+    esperado = total_ingresos + total_ventas - total_egresos
+
     if request.method == "POST":
         form = CierreCajaForm(request.POST)
         if form.is_valid():
             try:
-                cierre = cerrar_caja(
-                    caja=caja,
-                    monto_cierre=form.cleaned_data["monto_cierre"],
-                    notas=form.cleaned_data.get("notas", ""),
-                )
-
-                esperado = cierre.saldo_esperado
-                declarado = cierre.monto_cierre
+                declarado = form.cleaned_data["monto_cierre"]
                 diferencia = declarado - esperado
+
+                cerrar_caja(
+                    usuario=request.user,
+                    monto_cierre_declarado=declarado,
+                )
 
                 messages.success(
                     request,
                     f"La caja se cerró correctamente. Diferencia final: {diferencia}."
                 )
-                return redirect("caja:arqueo")
+                return redirect("caja:apertura")
 
             except ValidationError as e:
                 messages.error(request, e.message)
@@ -113,5 +136,9 @@ def cierre_caja(request):
         {
             "form": form,
             "caja": caja,
+            "total_ingresos": total_ingresos,
+            "total_egresos": total_egresos,
+            "total_ventas": total_ventas,
+            "esperado": esperado,
         },
     )
