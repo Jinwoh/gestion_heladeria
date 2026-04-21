@@ -505,3 +505,36 @@ textarea:focus {
     margin: 10px 0;
     cursor: pointer;
 }
+
+
+.field input[type="date"],
+.field select {
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  font: inherit;
+  outline: none;
+}
+
+.field input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1);
+}
+
+.field input[type="date"]::-webkit-datetime-edit {
+  color: #fff;
+}
+
+.field input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: #fff;
+}
+
+.field input[type="date"]::-webkit-datetime-edit-text,
+.field input[type="date"]::-webkit-datetime-edit-month-field,
+.field input[type="date"]::-webkit-datetime-edit-day-field,
+.field input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #fff;
+}
