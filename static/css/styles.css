@@ -489,3 +489,19 @@ textarea:focus {
         width: auto;
     }
 }
+
+.payment-methods {
+    margin: 16px 0;
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, .45);
+}
+
+.payment-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+    cursor: pointer;
+}

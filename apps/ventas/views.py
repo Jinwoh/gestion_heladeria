@@ -179,12 +179,23 @@ def pos_view(request):
                 messages.error(request, "El carrito no contiene productos válidos.")
                 return redirect("ventas:pos")
 
+            metodo_pago = request.POST.get("metodo_pago", "efectivo")
+            metodos_validos = {"efectivo", "tarjeta", "qr"}
+
+            if metodo_pago not in metodos_validos:
+                messages.error(request, "Método de pago inválido.")
+                return redirect("ventas:pos")
+
             try:
-                venta = crear_venta(usuario=request.user, items=items)
+                venta = crear_venta(
+                    usuario=request.user,
+                    items=items,
+                    metodo_pago=metodo_pago,
+                )
                 _clear_cart(request.session)
                 messages.success(
                     request,
-                    f"Venta #{venta.id} confirmada. Total: {venta.total}"
+                    f"Venta #{venta.id} confirmada. Total: {venta.total} · Método: {venta.get_metodo_pago_display()}"
                 )
                 return redirect("ventas:pos")
             except ValidationError as e:
@@ -233,3 +244,5 @@ def pos_view(request):
         "carrito_total": carrito_total,
     }
     return render(request, "pos/pos.html", ctx)
+
+

@@ -59,6 +59,23 @@ class Venta(models.Model):
 
     def __str__(self) -> str:
         return f"Venta {self.id} - {self.total} - {self.estado}"
+    
+    class MetodoPago(models.TextChoices):
+        EFECTIVO = "efectivo", "Efectivo"
+        TARJETA = "tarjeta", "Tarjeta de Crédito/Débito"
+        QR = "qr", "QR"
+
+    fecha = models.DateTimeField(auto_now_add=True)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    metodo_pago = models.CharField(
+        max_length=12, 
+        choices=MetodoPago.choices, 
+        default=MetodoPago.EFECTIVO,
+    )
+    def __str__(self):
+        return f"Venta #{self.id}"
+
 
 
 
@@ -76,3 +93,6 @@ class VentaDetalle(models.Model):
 
     def __str__(self) -> str:
         return f"{self.producto.nombre} x{self.cantidad}"
+
+
+

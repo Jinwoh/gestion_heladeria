@@ -101,8 +101,8 @@
                 <div style="text-align:right">
                   <div><b>{{ item.subtotal }}</b></div>
                 </div>
-              </div>
-
+            </div>
+            {% endfor %}
               <div class="row" style="margin-top:12px; justify-content:space-between">
                 <form method="post" class="row" style="margin:0">
                   {% csrf_token %}
@@ -117,32 +117,37 @@
                   >
                   <button class="btn" type="submit">Actualizar</button>
                 </form>
+                <form method="post" style="margin:0 0 12px 0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="confirm">
+
+                  <div class="payment-methods" style="margin-bottom:14px">
+                    <p><strong>Método de pago</strong></p>
+
+                    <label class="payment-option">
+                      <input type="radio" name="metodo_pago" value="efectivo" checked>
+                      <span>Efectivo</span>
+                    </label>
+
+                    <label class="payment-option">
+                      <input type="radio" name="metodo_pago" value="tarjeta">
+                      <span>Tarjeta débito/crédito</span>
+                    </label>
+
+                    <label class="payment-option">
+                      <input type="radio" name="metodo_pago" value="qr">
+                      <span>QR</span>
+                    </label>
+                  </div>
+
+                  <button class="btn primary" type="submit">Confirmar venta</button>
+                </form>
 
                 <form method="post" style="margin:0">
                   {% csrf_token %}
-                  <input type="hidden" name="action" value="remove">
-                  <input type="hidden" name="producto_id" value="{{ item.producto_id }}">
-                  <button class="btn danger" type="submit">Quitar</button>
+                  <input type="hidden" name="action" value="clear">
+                  <button class="btn warn" type="submit">Vaciar carrito</button>
                 </form>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-
-        <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border)">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px">
-            <span style="font-size:1.05rem"><b>Total</b></span>
-            <span style="font-size:1.2rem"><b>{{ carrito_total }}</b></span>
-          </div>
-
-          <div class="row">
-            <form method="post" style="margin:0">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="confirm">
-              <button class="btn primary" type="submit">Confirmar venta</button>
-            </form>
-
-            <form method="post" style="margin:0">
               {% csrf_token %}
               <input type="hidden" name="action" value="clear">
               <button class="btn warn" type="submit">Vaciar carrito</button>
