@@ -3,9 +3,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
+from django.core.paginator import Paginator
+
 from apps.caja.services import get_caja_abierta
 from apps.inventario.models import Stock
 from apps.productos.models import Producto
+
 from .services import crear_venta
 
 
@@ -73,15 +76,9 @@ def pos_view(request):
 
             if nueva_cantidad > stock_disponible:
                 if stock_disponible <= 0:
-                    messages.error(
-                        request,
-                        f"'{producto.nombre}' no tiene existencias disponibles."
-                    )
+                    messages.error(request, f"'{producto.nombre}' no tiene existencias disponibles.")
                 else:
-                    messages.warning(
-                        request,
-                        f"Stock insuficiente para '{producto.nombre}'. Disponible: {stock_disponible}."
-                    )
+                    messages.warning(request, f"Stock insuficiente para '{producto.nombre}'. Disponible: {stock_disponible}.")
                 return redirect("ventas:pos")
 
             cart[str(producto_id)] = nueva_cantidad
@@ -114,15 +111,9 @@ def pos_view(request):
 
             if cantidad > stock_disponible:
                 if stock_disponible <= 0:
-                    messages.error(
-                        request,
-                        f"'{producto.nombre}' ya no tiene existencias disponibles."
-                    )
+                    messages.error(request, f"'{producto.nombre}' ya no tiene existencias disponibles.")
                 else:
-                    messages.warning(
-                        request,
-                        f"Stock insuficiente para '{producto.nombre}'. Disponible: {stock_disponible}."
-                    )
+                    messages.warning(request, f"Stock insuficiente para '{producto.nombre}'. Disponible: {stock_disponible}.")
                 return redirect("ventas:pos")
 
             cart[str(producto_id)] = cantidad
@@ -168,12 +159,10 @@ def pos_view(request):
                 if cantidad_int <= 0:
                     continue
 
-                items.append(
-                    {
-                        "producto_id": producto_id,
-                        "cantidad": cantidad_int,
-                    }
-                )
+                items.append({
+                    "producto_id": producto_id,
+                    "cantidad": cantidad_int,
+                })
 
             if not items:
                 messages.error(request, "El carrito no contiene productos válidos.")
@@ -203,7 +192,6 @@ def pos_view(request):
             except Exception as e:
                 messages.error(request, f"Error al crear venta: {str(e)}")
 
-    # Releer carrito después de posibles cambios
     cart = _get_cart(request.session)
 
     carrito_items = []
@@ -224,17 +212,15 @@ def pos_view(request):
         subtotal = precio * cantidad_int
         carrito_total += subtotal
 
-        carrito_items.append(
-            {
-                "producto_id": producto.id,
-                "nombre": producto.nombre,
-                "categoria": producto.categoria.nombre if producto.categoria else "-",
-                "precio": precio,
-                "cantidad": cantidad_int,
-                "subtotal": subtotal,
-                "stock": stock_map.get(producto.id, 0),
-            }
-        )
+        carrito_items.append({
+            "producto_id": producto.id,
+            "nombre": producto.nombre,
+            "categoria": producto.categoria.nombre if producto.categoria else "-",
+            "precio": precio,
+            "cantidad": cantidad_int,
+            "subtotal": subtotal,
+            "stock": stock_map.get(producto.id, 0),
+        })
 
     ctx = {
         "caja": caja,
@@ -250,31 +236,27 @@ def pos_view(request):
 def lista_productos(request):
     q = request.GET.get("q", "").strip()
     categoria_id = request.GET.get("categoria", "").strip()
-    estado = request.GET.get("estado", "todos").strip()
+    estado = request.GET.get("estado", "activos").strip()
 
-    productos = Producto.objects.select_related("categoria").order_by(
+    productos_qs = Producto.objects.select_related("categoria").order_by(
         "categoria__orden",
         "categoria__nombre",
         "nombre",
     )
 
     if q:
-        productos = productos.filter(nombre__icontains=q)
+        productos_qs = productos_qs.filter(nombre__icontains=q)
 
     if categoria_id:
         try:
-            productos = productos.filter(categoria_id=int(categoria_id))
+            productos_qs = productos_qs.filter(categoria_id=int(categoria_id))
         except ValueError:
             pass
 
     if estado == "activos":
-        productos = productos.filter(activo=True)
+        productos_qs = productos_qs.filter(activo=True)
     elif estado == "inactivos":
-        productos = productos.filter(activo=False)
-    # si estado == "todos", no filtramos
-
-    stocks = Stock.objects.filter(producto__in=productos).select_related("producto")
-    stock_map = {s.producto_id: s.cantidad for s in stocks}
+        productos_qs = productos_qs.filter(activo=False)
 
     categorias = (
         Producto.objects.select_related("categoria")
@@ -283,8 +265,16 @@ def lista_productos(request):
         .order_by("categoria__nombre")
     )
 
+    paginator = Paginator(productos_qs, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    stocks = Stock.objects.filter(producto__in=page_obj.object_list).select_related("producto")
+    stock_map = {s.producto_id: s.cantidad for s in stocks}
+
     ctx = {
-        "productos": productos,
+        "productos": page_obj.object_list,
+        "page_obj": page_obj,
         "stock_map": stock_map,
         "categorias": categorias,
         "q": q,

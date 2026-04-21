@@ -11,10 +11,40 @@
       </p>
 
       <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
-        <h3></h3>
+        <h3>Resumen</h3>
         <div class="msg">Ventas: <b>{{ kpis.cantidad_ventas }}</b></div>
         <div class="msg">Total facturado: <b>{{ kpis.total_facturado }}</b></div>
         <div class="msg">Ticket promedio: <b>{{ kpis.ticket_promedio }}</b></div>
+      </div>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Ventas por método de pago</h3>
+        {% if por_metodo %}
+          {% for row in por_metodo %}
+            <div class="msg">
+              {{ row.metodo_pago|title }}:
+              <b>{{ row.total }}</b>
+              · {{ row.cantidad }} ventas
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted">No hay ventas hoy.</p>
+        {% endif %}
+      </div>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Top productos del día</h3>
+        {% if top_productos %}
+          {% for row in top_productos %}
+            <div class="msg">
+              {{ row.producto__nombre }} ·
+              <b>{{ row.cantidad_total }}</b> unidades ·
+              Total: <b>{{ row.total_vendido }}</b>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted">No hay productos vendidos hoy.</p>
+        {% endif %}
       </div>
 
       <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
@@ -28,6 +58,7 @@
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">ID</th>
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Hora</th>
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Cajero</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Método</th>
                   <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Total</th>
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Items</th>
                 </tr>
@@ -38,6 +69,7 @@
                     <td style="padding:10px;border-bottom:1px solid var(--border)"><b>#{{ v.id }}</b></td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)" class="muted">{{ v.fecha|date:"H:i" }}</td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.usuario.username }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.get_metodo_pago_display }}</td>
                     <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ v.total }}</td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">
                       {% for d in v.detalles.all %}
@@ -55,6 +87,7 @@
       </div>
 
       <div class="row" style="margin-top:14px">
+        <a class="btn" href="{% url 'reportes:reporte_general' %}">Reporte general</a>
         <a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>
         <a class="btn warn" href="{% url 'caja:arqueo' %}">Arqueo</a>
       </div>
