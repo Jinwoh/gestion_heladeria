@@ -5,5 +5,6 @@ app_name = "ventas"
 
 urlpatterns = [
     path("", views.pos_view, name="pos"),  # /pos/
+    path("productos/", views.lista_productos, name="productos"),
     
 ]

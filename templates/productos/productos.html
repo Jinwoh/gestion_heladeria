@@ -1,5 +1,103 @@
 {% extends "base.html" %}
-{% block title %}Productos{% endblock %} 
-{% block content%}
+{% load pos_extras %}
+{% block title %}Productos{% endblock %}
 
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      <h1>Listado de productos</h1>
+
+      <form method="get" class="card" style="margin-top:14px; background:rgba(15,23,42,.55)">
+        <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap">
+          <div class="field" style="flex:1; min-width:220px">
+            <label for="id_q">Buscar producto</label>
+            <input
+              type="text"
+              name="q"
+              id="id_q"
+              value="{{ q }}"
+              placeholder="Ej.: Cono, Helado, Sundae"
+            >
+          </div>
+
+          <div class="field" style="min-width:220px">
+            <label for="id_categoria">Categoría</label>
+            <select name="categoria" id="id_categoria">
+              <option value="">Todas</option>
+              {% for cat_id, cat_nombre in categorias %}
+                <option value="{{ cat_id }}" {% if categoria_id == cat_id|stringformat:"s" %}selected{% endif %}>
+                  {{ cat_nombre }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field" style="min-width:220px">
+            <label for="id_estado">Estado</label>
+            <select name="estado" id="id_estado">
+              <option value="todos" {% if estado == "todos" %}selected{% endif %}>Todos</option>
+              <option value="activos" {% if estado == "activos" %}selected{% endif %}>Activos</option>
+              <option value="inactivos" {% if estado == "inactivos" %}selected{% endif %}>Inactivos</option>
+            </select>
+          </div>
+
+          <div class="row" style="gap:10px">
+            <button class="btn primary" type="submit">Filtrar</button>
+            <a class="btn warn" href="{% url 'ventas:productos' %}">Limpiar</a>
+          </div>
+        </div>
+      </form>
+
+      {% if productos %}
+        <div style="overflow:auto; border:1px solid var(--border); border-radius:12px; margin-top:14px">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">ID</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Producto</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Categoría</th>
+                <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Precio</th>
+                <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Stock</th>
+                <th style="text-align:center; padding:10px; border-bottom:1px solid var(--border)">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in productos %}
+                <tr>
+                  <td style="padding:10px; border-bottom:1px solid var(--border)">
+                    {{ p.id }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border)">
+                    <b>{{ p.nombre }}</b>
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border)">
+                    {{ p.categoria.nombre }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                    {{ p.precio }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                    {{ stock_map|get_item:p.id|default:"0" }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:center">
+                    {% if p.activo %}
+                      <span class="pill">Activo</span>
+                    {% else %}
+                      <span class="pill" style="border-color: rgba(239,68,68,.35); color:#fca5a5;">Inactivo</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted" style="margin-top:14px">No se encontraron productos con los filtros aplicados.</p>
+      {% endif %}
+
+      <div class="row" style="margin-top:16px">
+        <a class="btn" href="{% url 'ventas:pos' %}">Volver al POS</a>
+      </div>
+    </section>
+  </div>
 {% endblock %}

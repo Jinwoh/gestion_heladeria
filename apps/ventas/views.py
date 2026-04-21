@@ -246,3 +246,49 @@ def pos_view(request):
     return render(request, "pos/pos.html", ctx)
 
 
+@login_required
+def lista_productos(request):
+    q = request.GET.get("q", "").strip()
+    categoria_id = request.GET.get("categoria", "").strip()
+    estado = request.GET.get("estado", "todos").strip()
+
+    productos = Producto.objects.select_related("categoria").order_by(
+        "categoria__orden",
+        "categoria__nombre",
+        "nombre",
+    )
+
+    if q:
+        productos = productos.filter(nombre__icontains=q)
+
+    if categoria_id:
+        try:
+            productos = productos.filter(categoria_id=int(categoria_id))
+        except ValueError:
+            pass
+
+    if estado == "activos":
+        productos = productos.filter(activo=True)
+    elif estado == "inactivos":
+        productos = productos.filter(activo=False)
+    # si estado == "todos", no filtramos
+
+    stocks = Stock.objects.filter(producto__in=productos).select_related("producto")
+    stock_map = {s.producto_id: s.cantidad for s in stocks}
+
+    categorias = (
+        Producto.objects.select_related("categoria")
+        .values_list("categoria_id", "categoria__nombre")
+        .distinct()
+        .order_by("categoria__nombre")
+    )
+
+    ctx = {
+        "productos": productos,
+        "stock_map": stock_map,
+        "categorias": categorias,
+        "q": q,
+        "categoria_id": categoria_id,
+        "estado": estado,
+    }
+    return render(request, "productos/productos.html", ctx)
