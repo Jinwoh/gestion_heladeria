@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load reportes_extras %}
 {% block title %}Reporte general{% endblock %}
 
 {% block content %}
@@ -52,16 +53,107 @@
       <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
         <h3>KPIs</h3>
         <div class="msg">Ventas: <b>{{ kpis.cantidad_ventas }}</b></div>
-        <div class="msg">Total facturado: <b>{{ kpis.total_facturado }}</b></div>
-        <div class="msg">Ticket promedio: <b>{{ kpis.ticket_promedio }}</b></div>
+        <div class="msg">Total facturado: <b>{{ kpis.total_facturado|gs }}</b></div>
+        <div class="msg">Ticket promedio: <b>{{ kpis.ticket_promedio|gs }}</b></div>
       </div>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Comparativa contra período anterior</h3>
+        <div class="msg">
+          Período actual: <b>{{ comparativa.actual.total_facturado|gs }}</b>
+        </div>
+        <div class="msg">
+          Período anterior ({{ comparativa.previo_desde }} a {{ comparativa.previo_hasta }}):
+          <b>{{ comparativa.previo.total_facturado|gs }}</b>
+        </div>
+        <div class="msg">
+          Variación: <b>{{ comparativa.variacion_porcentual|floatformat:2 }}%</b>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Tendencia diaria</h3>
+        {% if tendencia %}
+          {% for row in tendencia %}
+            <div class="msg">
+              {{ row.fecha__date }} · {{ row.cantidad }} ventas · <b>{{ row.total|gs }}</b>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted">Sin datos.</p>
+        {% endif %}
+      </div>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Productos sin ventas en el período</h3>
+        {% if sin_ventas %}
+          {% for p in sin_ventas %}
+            <div class="msg">{{ p.nombre }} · {{ p.categoria.nombre }}</div>
+          {% endfor %}
+        {% else %}
+          <p class="muted">Todos los productos tuvieron movimiento.</p>
+        {% endif %}
+      </div>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Productos de baja rotación</h3>
+        {% if baja_rotacion %}
+          {% for row in baja_rotacion %}
+            <div class="msg">
+              {{ row.producto__nombre }} · {{ row.cantidad_total }} unidades · <b>{{ row.total_vendido|gs }}</b>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted">Sin datos.</p>
+        {% endif %}
+      </div>
+
+      {% if puede_ver_cierres %}
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Cierres de caja</h3>
+        {% if cierres %}
+          <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Caja</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Usuario</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Apertura</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Cierre</th>
+                  <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Ventas</th>
+                  <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Ingresos</th>
+                  <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Egresos</th>
+                  <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Declarado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in cierres %}
+                  <tr>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">#{{ c.id }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">{{ c.usuario.username }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">{{ c.fecha_apertura|date:"d/m/Y H:i" }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">{{ c.fecha_cierre|date:"d/m/Y H:i" }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ c.total_ventas|gs }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ c.total_ingresos|gs }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ c.total_egresos|gs }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ c.monto_cierre_declarado|gs }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="muted">Sin cierres de caja en el período.</p>
+        {% endif %}
+      </div>
+      {% endif %}
 
       <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
         <h3>Ventas por método de pago</h3>
         {% if por_metodo %}
           {% for row in por_metodo %}
             <div class="msg">
-              {{ row.metodo_pago|title }} · <b>{{ row.total }}</b> · {{ row.cantidad }} ventas
+              {{ row.metodo_pago|title }} · <b>{{ row.total|gs }}</b> · {{ row.cantidad }} ventas
             </div>
           {% endfor %}
         {% else %}
@@ -74,7 +166,7 @@
         {% if por_usuario %}
           {% for row in por_usuario %}
             <div class="msg">
-              {{ row.usuario__username }} · <b>{{ row.total }}</b> · {{ row.cantidad }} ventas
+              {{ row.usuario__username }} · <b>{{ row.total|gs }}</b> · {{ row.cantidad }} ventas
             </div>
           {% endfor %}
         {% else %}
@@ -87,7 +179,7 @@
         {% if por_caja %}
           {% for row in por_caja %}
             <div class="msg">
-              Caja #{{ row.caja_sesion__id }} · <b>{{ row.total }}</b> · {{ row.cantidad }} ventas
+              Caja #{{ row.caja_sesion__id }} · <b>{{ row.total|gs }}</b> · {{ row.cantidad }} ventas
             </div>
           {% endfor %}
         {% else %}
@@ -100,7 +192,7 @@
         {% if top_productos %}
           {% for row in top_productos %}
             <div class="msg">
-              {{ row.producto__nombre }} · {{ row.cantidad_total }} unidades · <b>{{ row.total_vendido }}</b>
+              {{ row.producto__nombre }} · {{ row.cantidad_total }} unidades · <b>{{ row.total_vendido|gs }}</b>
             </div>
           {% endfor %}
         {% else %}
@@ -125,7 +217,7 @@
                   <tr>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ row.producto__nombre }}</td>
                     <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ row.cantidad_total }}</td>
-                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ row.total_vendido }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ row.total_vendido|gs }}</td>
                   </tr>
                 {% endfor %}
               </tbody>
@@ -153,11 +245,13 @@
               <tbody>
                 {% for v in ventas %}
                   <tr>
-                    <td style="padding:10px;border-bottom:1px solid var(--border)">#{{ v.id }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      <a href="{% url 'reportes:detalle_venta' v.id %}"><b>#{{ v.id }}</b></a>
+                    </td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.fecha|date:"d/m/Y H:i" }}</td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.usuario.username }}</td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.get_metodo_pago_display }}</td>
-                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ v.total }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ v.total|gs }}</td>
                   </tr>
                 {% endfor %}
               </tbody>

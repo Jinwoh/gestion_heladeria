@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}POS{% endblock %}
+{% load pos_extras %}
+
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      <h1>POS (Punto de Venta)</h1>
+
+      {% if caja %}
+        <div class="msg">
+          Caja abierta:
+          <b>ID {{ caja.id }}</b>
+          · Apertura: <b>{{ caja.monto_apertura }}</b>
+          · {{ caja.fecha_apertura }}
+        </div>
+      {% else %}
+        <div class="msg">
+          No hay caja abierta.
+          <a class="pill" href="{% url 'caja:apertura' %}">Abrir caja</a>
+        </div>
+      {% endif %}
+
+      <div class="card" style="margin-top:14px; background:rgba(15,23,42,.55)">
+        <h3>Productos</h3>
+
+        {% if productos %}
+          <div style="overflow:auto; border:1px solid var(--border); border-radius:12px">
+            <table style="width:100%; border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Producto</th>
+                  <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Categoría</th>
+                  <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Precio</th>
+                  <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Stock</th>
+                  <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Cantidad</th>
+                  <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in productos %}
+                  <tr>
+                    <td style="padding:10px; border-bottom:1px solid var(--border)">
+                      <b>{{ p.nombre }}</b>
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border)" class="muted">
+                      {{ p.categoria.nombre }}
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                      {{ p.precio }}
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                      {{ stock_map|get_item:p.id|default:"0" }}
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                      <form method="post" class="row" style="justify-content:flex-end; margin:0">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add">
+                        <input type="hidden" name="producto_id" value="{{ p.id }}">
+                        <input
+                          name="cantidad"
+                          type="number"
+                          min="1"
+                          value="1"
+                          style="width:90px; text-align:right"
+                          {% if not caja %}disabled{% endif %}
+                        />
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                        <button class="btn" type="submit" {% if not caja %}disabled{% endif %}>
+                          Agregar
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="muted">No hay productos activos.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <aside class="card">
+      <h2>Carrito</h2>
+
+      {% if carrito_items %}
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px">
+          {% for item in carrito_items %}
+            <div style="border:1px solid var(--border); border-radius:12px; padding:12px; background:rgba(255,255,255,.03)">
+              <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start">
+                <div>
+                  <b>{{ item.nombre }}</b>
+                  <div class="muted" style="margin-top:4px">{{ item.categoria }}</div>
+                  <div class="muted" style="margin-top:4px">
+                    Precio: {{ item.precio }} · Stock: {{ item.stock }}
+                  </div>
+                </div>
+                <div style="text-align:right">
+                  <div><b>{{ item.subtotal }}</b></div>
+                </div>
+            </div>
+            {% endfor %}
+              <div class="row" style="margin-top:12px; justify-content:space-between">
+                <form method="post" class="row" style="margin:0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="update">
+                  <input type="hidden" name="producto_id" value="{{ item.producto_id }}">
+                  <input
+                    type="number"
+                    name="cantidad"
+                    min="0"
+                    value="{{ item.cantidad }}"
+                    style="width:90px; text-align:right"
+                  >
+                  <button class="btn" type="submit">Actualizar</button>
+                </form>
+                <form method="post" style="margin:0 0 12px 0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="confirm">
+
+                  <div class="payment-methods" style="margin-bottom:14px">
+                    <p><strong>Método de pago</strong></p>
+
+                    <label class="payment-option">
+                      <input type="radio" name="metodo_pago" value="efectivo" checked>
+                      <span>Efectivo</span>
+                    </label>
+
+                    <label class="payment-option">
+                      <input type="radio" name="metodo_pago" value="tarjeta">
+                      <span>Tarjeta débito/crédito</span>
+                    </label>
+
+                    <label class="payment-option">
+                      <input type="radio" name="metodo_pago" value="qr">
+                      <span>QR</span>
+                    </label>
+                  </div>
+
+                  <button class="btn primary" type="submit">Confirmar venta</button>
+                </form>
+
+                <form method="post" style="margin:0">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="clear">
+                  <button class="btn warn" type="submit">Vaciar carrito</button>
+                </form>
+              {% csrf_token %}
+              <input type="hidden" name="action" value="clear">
+              <button class="btn warn" type="submit">Vaciar carrito</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <p class="muted" style="margin-top:14px">
+          El carrito está vacío.
+        </p>
+      {% endif %}
+
+      <div class="row" style="margin-top:16px">
+        <a class="btn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
+        <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>
+      </div>
+
+      <p class="muted" style="margin-top:12px">
+        Si el stock no alcanza, la venta falla y no se guarda nada.
+      </p>
+    </aside>
+  </div>
+{% endblock %}

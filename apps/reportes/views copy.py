@@ -1,10 +1,8 @@
-from datetime import datetime
-
-from django.contrib import messages
-from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+from datetime import datetime
 
 from apps.ventas.models import Venta
 from .selectors import (
@@ -17,11 +15,6 @@ from .selectors import (
     ventas_por_caja,
     ventas_por_producto,
     top_productos_vendidos,
-    productos_sin_ventas,
-    productos_baja_rotacion,
-    ventas_por_dia,
-    comparativa_periodo,
-    cierres_caja_qs,
 )
 
 User = get_user_model()
@@ -36,26 +29,19 @@ def _parse_date(value):
         return None
 
 
-def _puede_ver_reportes_global(user):
-    return user.is_superuser or user.has_perm("ventas.view_venta")
-
-
-def _puede_ver_cierres(user):
-    return user.is_superuser or user.has_perm("caja.view_cajasesion") or user.has_perm("ventas.view_venta")
-
-
 @login_required
 def reporte_dia(request):
     fecha = timezone.localdate()
-    puede_ver_global = _puede_ver_reportes_global(request.user)
+
+    puede_ver_global = request.user.has_perm("ventas.view_venta")
     usuario_filtro = None if puede_ver_global else request.user
 
     kpis = resumen_ventas_del_dia(fecha=fecha, usuario=usuario_filtro)
 
     ventas = (
         ventas_del_dia_qs(fecha=fecha, usuario=usuario_filtro)
-        .order_by("-fecha")
-        .prefetch_related("detalles", "detalles__producto")[:50]
+        .order_by("-fecha")[:50]
+        .prefetch_related("detalles", "detalles__producto")
     )
 
     por_metodo = ventas_por_metodo_pago(
@@ -90,12 +76,7 @@ def reporte_general(request):
     metodo_pago = request.GET.get("metodo_pago", "").strip()
     usuario_id = request.GET.get("usuario", "").strip()
 
-    if fecha_desde > fecha_hasta:
-        messages.error(request, "La fecha desde no puede ser mayor que la fecha hasta.")
-        fecha_desde = fecha_hasta
-
-    puede_ver_global = _puede_ver_reportes_global(request.user)
-    puede_ver_cierres = _puede_ver_cierres(request.user)
+    puede_ver_global = request.user.has_perm("ventas.view_venta")
 
     usuario_filtro = None
     usuarios = User.objects.filter(is_active=True).order_by("username")
@@ -158,43 +139,6 @@ def reporte_general(request):
         limit=10,
     )
 
-    sin_ventas = productos_sin_ventas(
-        fecha_desde=fecha_desde,
-        fecha_hasta=fecha_hasta,
-        usuario=usuario_filtro,
-        solo_activos=True,
-        limit=15,
-    )
-
-    baja_rotacion = productos_baja_rotacion(
-        fecha_desde=fecha_desde,
-        fecha_hasta=fecha_hasta,
-        usuario=usuario_filtro,
-        limit=15,
-    )
-
-    tendencia = ventas_por_dia(
-        fecha_desde=fecha_desde,
-        fecha_hasta=fecha_hasta,
-        usuario=usuario_filtro,
-        metodo_pago=metodo_pago or None,
-    )
-
-    comparativa = comparativa_periodo(
-        fecha_desde=fecha_desde,
-        fecha_hasta=fecha_hasta,
-        usuario=usuario_filtro,
-        metodo_pago=metodo_pago or None,
-    )
-
-    cierres = []
-    if puede_ver_cierres:
-        cierres = cierres_caja_qs(
-            fecha_desde=fecha_desde,
-            fecha_hasta=fecha_hasta,
-            usuario=None if puede_ver_global else request.user,
-        )[:30]
-
     ctx = {
         "fecha_desde": fecha_desde,
         "fecha_hasta": fecha_hasta,
@@ -208,29 +152,6 @@ def reporte_general(request):
         "por_caja": por_caja,
         "por_producto": por_producto,
         "top_productos": top_productos,
-        "sin_ventas": sin_ventas,
-        "baja_rotacion": baja_rotacion,
-        "tendencia": tendencia,
-        "comparativa": comparativa,
-        "cierres": cierres,
         "puede_ver_global": puede_ver_global,
-        "puede_ver_cierres": puede_ver_cierres,
     }
     return render(request, "reportes/general.html", ctx)
-
-
-@login_required
-def detalle_venta(request, venta_id):
-    puede_ver_global = _puede_ver_reportes_global(request.user)
-
-    venta = get_object_or_404(
-        Venta.objects.select_related("usuario", "caja_sesion").prefetch_related("detalles", "detalles__producto"),
-        pk=venta_id,
-        estado=Venta.Estado.CONFIRMADA,
-    )
-
-    if not puede_ver_global and venta.usuario != request.user:
-        messages.error(request, "No tenés permisos para ver esa venta.")
-        return render(request, "reportes/detalle_venta.html", {"venta": None})
-
-    return render(request, "reportes/detalle_venta.html", {"venta": venta})

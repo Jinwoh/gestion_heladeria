@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load reportes_extras %}
 {% block title %}Reporte del día{% endblock %}
 
 {% block content %}
@@ -13,8 +14,8 @@
       <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
         <h3>Resumen</h3>
         <div class="msg">Ventas: <b>{{ kpis.cantidad_ventas }}</b></div>
-        <div class="msg">Total facturado: <b>{{ kpis.total_facturado }}</b></div>
-        <div class="msg">Ticket promedio: <b>{{ kpis.ticket_promedio }}</b></div>
+        <div class="msg">Total facturado: <b>{{ kpis.total_facturado|gs }}</b></div>
+        <div class="msg">Ticket promedio: <b>{{ kpis.ticket_promedio|gs }}</b></div>
       </div>
 
       <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
@@ -23,7 +24,7 @@
           {% for row in por_metodo %}
             <div class="msg">
               {{ row.metodo_pago|title }}:
-              <b>{{ row.total }}</b>
+              <b>{{ row.total|gs }}</b>
               · {{ row.cantidad }} ventas
             </div>
           {% endfor %}
@@ -39,7 +40,7 @@
             <div class="msg">
               {{ row.producto__nombre }} ·
               <b>{{ row.cantidad_total }}</b> unidades ·
-              Total: <b>{{ row.total_vendido }}</b>
+              Total: <b>{{ row.total_vendido|gs }}</b>
             </div>
           {% endfor %}
         {% else %}
@@ -66,11 +67,21 @@
               <tbody>
                 {% for v in ventas %}
                   <tr>
-                    <td style="padding:10px;border-bottom:1px solid var(--border)"><b>#{{ v.id }}</b></td>
-                    <td style="padding:10px;border-bottom:1px solid var(--border)" class="muted">{{ v.fecha|date:"H:i" }}</td>
-                    <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.usuario.username }}</td>
-                    <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.get_metodo_pago_display }}</td>
-                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ v.total }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      <a href="{% url 'reportes:detalle_venta' v.id %}"><b>#{{ v.id }}</b></a>
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)" class="muted">
+                      {{ v.fecha|date:"H:i" }}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {{ v.usuario.username }}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {{ v.get_metodo_pago_display }}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                      {{ v.total|gs }}
+                    </td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">
                       {% for d in v.detalles.all %}
                         <span class="pill">{{ d.producto.nombre }} x{{ d.cantidad }}</span>
