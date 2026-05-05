@@ -1,87 +1,78 @@
-from django.db import models
 from django.conf import settings
 from django.db import models
-from apps.productos.models import Producto
+
 from apps.caja.models import CajaSesion
+from apps.productos.models import Producto
 
 
-class Categoria(models.Model):
-    nombre = models.CharField(max_length=120, unique=True)
-    activa = models.BooleanField(default=True)
-    orden = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        ordering = ["orden", "nombre"]
-        verbose_name = "Categoría"
-        verbose_name_plural = "Categorías"
-
-    def __str__(self) -> str:
-        return self.nombre
-
-
-class Producto(models.Model):
-    categoria = models.ForeignKey(Categoria, on_delete=models.PROTECT, related_name="productos")
-    nombre = models.CharField(max_length=180)
-    precio = models.DecimalField(max_digits=12, decimal_places=2)
-    activo = models.BooleanField(default=True)
-    codigo = models.CharField(max_length=50, blank=True, null=True, unique=True)
-
-    creado_en = models.DateTimeField(auto_now_add=True)
-    actualizado_en = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["nombre"]
-        constraints = [
-            models.UniqueConstraint(fields=["categoria", "nombre"], name="uq_ventas_producto_categoria_nombre"),
-        ]
-        verbose_name = "Producto"
-        verbose_name_plural = "Productos"
-
-    def __str__(self) -> str:
-        return f"{self.nombre} ({self.categoria})"
-    
 class Venta(models.Model):
     class Estado(models.TextChoices):
         CONFIRMADA = "CONFIRMADA", "Confirmada"
         ANULADA = "ANULADA", "Anulada"
 
-    caja_sesion = models.ForeignKey(CajaSesion, on_delete=models.PROTECT, related_name="ventas")
-    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="ventas")
+    caja_sesion = models.ForeignKey(
+        CajaSesion,
+        on_delete=models.PROTECT,
+        related_name="ventas",
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="ventas",
+    )
 
     fecha = models.DateTimeField(auto_now_add=True)
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.CONFIRMADA)
+    estado = models.CharField(
+        max_length=12,
+        choices=Estado.choices,
+        default=Estado.CONFIRMADA,
+    )
 
     class Meta:
         ordering = ["-fecha"]
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
 
-    def __str__(self) -> str:
-        return f"Venta {self.id} - {self.total} - {self.estado}"
-    
+    def __str__(self):
+        return f"Venta #{self.id} - {self.total}"
+
+
+class VentaPago(models.Model):
     class MetodoPago(models.TextChoices):
         EFECTIVO = "efectivo", "Efectivo"
-        TARJETA = "tarjeta", "Tarjeta de Crédito/Débito"
+        TARJETA = "tarjeta", "Tarjeta"
         QR = "qr", "QR"
 
-    fecha = models.DateTimeField(auto_now_add=True)
-    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    metodo_pago = models.CharField(
-        max_length=12, 
-        choices=MetodoPago.choices, 
-        default=MetodoPago.EFECTIVO,
+    venta = models.ForeignKey(
+        Venta,
+        on_delete=models.CASCADE,
+        related_name="pagos",
     )
+    metodo_pago = models.CharField(
+        max_length=12,
+        choices=MetodoPago.choices,
+    )
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Pago de venta"
+        verbose_name_plural = "Pagos de venta"
+
     def __str__(self):
-        return f"Venta #{self.id}"
-
-
+        return f"Venta #{self.venta_id} - {self.get_metodo_pago_display()} - {self.monto}"
 
 
 class VentaDetalle(models.Model):
-    venta = models.ForeignKey("ventas.Venta", on_delete=models.CASCADE, related_name="detalles")
-    producto = models.ForeignKey("productos.Producto", on_delete=models.PROTECT)  # ✅
+    venta = models.ForeignKey(
+        Venta,
+        on_delete=models.CASCADE,
+        related_name="detalles",
+    )
+    producto = models.ForeignKey(
+        Producto,
+        on_delete=models.PROTECT,
+    )
 
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
@@ -91,8 +82,5 @@ class VentaDetalle(models.Model):
         verbose_name = "Detalle de Venta"
         verbose_name_plural = "Detalles de Venta"
 
-    def __str__(self) -> str:
+    def __str__(self):
         return f"{self.producto.nombre} x{self.cantidad}"
-
-
-

@@ -238,7 +238,7 @@
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">ID</th>
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Fecha</th>
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Usuario</th>
-                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Método</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Pagos</th>
                   <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Total</th>
                 </tr>
               </thead>
@@ -250,7 +250,11 @@
                     </td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.fecha|date:"d/m/Y H:i" }}</td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.usuario.username }}</td>
-                    <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.get_metodo_pago_display }}</td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {% for pago in v.pagos.all %}
+                        <span class="pill">{{ pago.get_metodo_pago_display }}: {{ pago.monto|gs }}</span>
+                      {% endfor %}
+                    </td>
                     <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ v.total|gs }}</td>
                   </tr>
                 {% endfor %}

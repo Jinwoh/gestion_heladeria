@@ -5,7 +5,7 @@ from django.db.models import Sum, Count, Exists, OuterRef, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from apps.ventas.models import Venta, VentaDetalle
+from apps.ventas.models import Venta, VentaDetalle, VentaPago
 from apps.productos.models import Producto
 from apps.caja.models import CajaSesion, MovimientoCaja
 
@@ -14,6 +14,7 @@ def ventas_qs(*, fecha_desde=None, fecha_hasta=None, usuario=None, metodo_pago=N
     qs = (
         Venta.objects.filter(estado=Venta.Estado.CONFIRMADA)
         .select_related("usuario", "caja_sesion")
+        .prefetch_related("pagos")
     )
 
     if fecha_desde:
@@ -26,7 +27,7 @@ def ventas_qs(*, fecha_desde=None, fecha_hasta=None, usuario=None, metodo_pago=N
         qs = qs.filter(usuario=usuario)
 
     if metodo_pago:
-        qs = qs.filter(metodo_pago=metodo_pago)
+        qs = qs.filter(pagos__metodo_pago=metodo_pago).distinct()
 
     return qs
 
@@ -52,7 +53,7 @@ def resumen_ventas(*, fecha_desde=None, fecha_hasta=None, usuario=None, metodo_p
 
     agg = qs.aggregate(
         total_facturado=Coalesce(Sum("total"), Decimal("0")),
-        cantidad_ventas=Count("id"),
+        cantidad_ventas=Count("id", distinct=True),
     )
 
     total = agg["total_facturado"] or Decimal("0")
@@ -82,15 +83,22 @@ def resumen_ventas_del_dia(*, fecha=None, usuario=None) -> dict:
 
 
 def ventas_por_metodo_pago(*, fecha_desde=None, fecha_hasta=None, usuario=None):
-    qs = ventas_qs(
-        fecha_desde=fecha_desde,
-        fecha_hasta=fecha_hasta,
-        usuario=usuario,
+    pagos = VentaPago.objects.filter(
+        venta__estado=Venta.Estado.CONFIRMADA
     )
 
-    return qs.values("metodo_pago").annotate(
-        cantidad=Count("id"),
-        total=Coalesce(Sum("total"), Decimal("0")),
+    if fecha_desde:
+        pagos = pagos.filter(venta__fecha__date__gte=fecha_desde)
+
+    if fecha_hasta:
+        pagos = pagos.filter(venta__fecha__date__lte=fecha_hasta)
+
+    if usuario is not None:
+        pagos = pagos.filter(venta__usuario=usuario)
+
+    return pagos.values("metodo_pago").annotate(
+        cantidad=Count("venta", distinct=True),
+        total=Coalesce(Sum("monto"), Decimal("0")),
     ).order_by("-total")
 
 
@@ -105,7 +113,7 @@ def ventas_por_usuario(*, fecha_desde=None, fecha_hasta=None, usuario=None):
         "usuario__id",
         "usuario__username",
     ).annotate(
-        cantidad=Count("id"),
+        cantidad=Count("id", distinct=True),
         total=Coalesce(Sum("total"), Decimal("0")),
     ).order_by("-total")
 
@@ -120,7 +128,7 @@ def ventas_por_caja(*, fecha_desde=None, fecha_hasta=None, usuario=None):
     return qs.values(
         "caja_sesion__id",
     ).annotate(
-        cantidad=Count("id"),
+        cantidad=Count("id", distinct=True),
         total=Coalesce(Sum("total"), Decimal("0")),
     ).order_by("-total")
 
@@ -232,7 +240,7 @@ def ventas_por_dia(*, fecha_desde=None, fecha_hasta=None, usuario=None, metodo_p
     )
 
     return qs.values("fecha__date").annotate(
-        cantidad=Count("id"),
+        cantidad=Count("id", distinct=True),
         total=Coalesce(Sum("total"), Decimal("0")),
     ).order_by("fecha__date")
 

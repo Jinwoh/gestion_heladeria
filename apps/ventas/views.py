@@ -1,9 +1,10 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.shortcuts import redirect, render
 from django.core.paginator import Paginator
+from django.shortcuts import redirect, render
 
 from apps.caja.services import get_caja_abierta
 from apps.inventario.models import Stock
@@ -27,6 +28,13 @@ def _save_cart(session, cart):
 def _clear_cart(session):
     session[CART_SESSION_KEY] = {}
     session.modified = True
+
+
+def _parse_decimal(value, default="0"):
+    try:
+        return Decimal(str(value or default))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal(default)
 
 
 @login_required
@@ -168,23 +176,32 @@ def pos_view(request):
                 messages.error(request, "El carrito no contiene productos válidos.")
                 return redirect("ventas:pos")
 
-            metodo_pago = request.POST.get("metodo_pago", "efectivo")
-            metodos_validos = {"efectivo", "tarjeta", "qr"}
+            monto_efectivo = _parse_decimal(request.POST.get("monto_efectivo"))
+            monto_tarjeta = _parse_decimal(request.POST.get("monto_tarjeta"))
+            monto_qr = _parse_decimal(request.POST.get("monto_qr"))
 
-            if metodo_pago not in metodos_validos:
-                messages.error(request, "Método de pago inválido.")
+            pagos = []
+            if monto_efectivo > 0:
+                pagos.append({"metodo_pago": "efectivo", "monto": monto_efectivo})
+            if monto_tarjeta > 0:
+                pagos.append({"metodo_pago": "tarjeta", "monto": monto_tarjeta})
+            if monto_qr > 0:
+                pagos.append({"metodo_pago": "qr", "monto": monto_qr})
+
+            if not pagos:
+                messages.error(request, "Debés ingresar al menos un monto de pago.")
                 return redirect("ventas:pos")
 
             try:
                 venta = crear_venta(
                     usuario=request.user,
                     items=items,
-                    metodo_pago=metodo_pago,
+                    pagos=pagos,
                 )
                 _clear_cart(request.session)
                 messages.success(
                     request,
-                    f"Venta #{venta.id} confirmada. Total: {venta.total} · Método: {venta.get_metodo_pago_display()}"
+                    f"Venta #{venta.id} confirmada. Total: {venta.total}"
                 )
                 return redirect("ventas:pos")
             except ValidationError as e:

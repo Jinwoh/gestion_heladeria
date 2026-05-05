@@ -55,7 +55,7 @@ def reporte_dia(request):
     ventas = (
         ventas_del_dia_qs(fecha=fecha, usuario=usuario_filtro)
         .order_by("-fecha")
-        .prefetch_related("detalles", "detalles__producto")[:50]
+        .prefetch_related("detalles", "detalles__producto", "pagos")[:50]
     )
 
     por_metodo = ventas_por_metodo_pago(
@@ -124,7 +124,7 @@ def reporte_general(request):
             metodo_pago=metodo_pago or None,
         )
         .order_by("-fecha")
-        .prefetch_related("detalles", "detalles__producto")[:100]
+        .prefetch_related("detalles", "detalles__producto", "pagos")[:100]
     )
 
     por_metodo = ventas_por_metodo_pago(
@@ -224,7 +224,7 @@ def detalle_venta(request, venta_id):
     puede_ver_global = _puede_ver_reportes_global(request.user)
 
     venta = get_object_or_404(
-        Venta.objects.select_related("usuario", "caja_sesion").prefetch_related("detalles", "detalles__producto"),
+        Venta.objects.select_related("usuario", "caja_sesion").prefetch_related("detalles", "detalles__producto", "pagos"),
         pk=venta_id,
         estado=Venta.Estado.CONFIRMADA,
     )
