@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Historial de cierres{% endblock %}
+
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      <h1>Historial de cierres</h1>
+
+      {% if historial %}
+        <div style="overflow:auto; border:1px solid var(--border); border-radius:12px; margin-top:14px">
+          <table style="width:100%; border-collapse:collapse">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Caja</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Usuario</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Apertura</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Cierre</th>
+                <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Efectivo</th>
+                <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Tarjeta</th>
+                <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">QR</th>
+                <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Esperado</th>
+                <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Declarado</th>
+                <th style="text-align:right; padding:10px; border-bottom:1px solid var(--border)">Diferencia</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid var(--border)">Observación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in historial %}
+                <tr>
+                  <td style="padding:10px; border-bottom:1px solid var(--border)">
+                    {{ item.sesion.caja.numero }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border)">
+                    {{ item.sesion.usuario.username }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border)">
+                    {{ item.sesion.fecha_apertura|date:"d/m/Y H:i" }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border)">
+                    {{ item.sesion.fecha_cierre|date:"d/m/Y H:i" }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                    {{ item.ventas_efectivo }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                    {{ item.ventas_tarjeta }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                    {{ item.ventas_qr }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                    {{ item.esperado }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                    {{ item.declarado }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
+                    {{ item.diferencia }}
+                  </td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border)">
+                    {{ item.sesion.observacion_diferencia|default:"-" }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted" style="margin-top:14px">No hay cierres registrados.</p>
+      {% endif %}
+
+      <div class="row" style="margin-top:16px">
+        <a class="btn" href="{% url 'caja:apertura' %}">Volver</a>
+      </div>
+    </section>
+  </div>
+{% endblock %}

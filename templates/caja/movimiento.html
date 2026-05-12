@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Movimiento de caja{% endblock %}
+
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      <h1>Registrar movimiento de caja</h1>
+
+      <div class="msg">
+        Caja: <b>{{ caja.caja.numero }}</b> · Usuario: <b>{{ caja.usuario.username }}</b>
+      </div>
+
+      <form method="post" style="margin-top:14px">
+        {% csrf_token %}
+
+        <div class="field">
+          <label>{{ form.tipo.label }}</label>
+          {{ form.tipo }}
+          {% for err in form.tipo.errors %}
+            <div class="msg">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="field">
+          <label>{{ form.monto.label }}</label>
+          {{ form.monto }}
+          {% for err in form.monto.errors %}
+            <div class="msg">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="field">
+          <label>{{ form.motivo.label }}</label>
+          {{ form.motivo }}
+          {% for err in form.motivo.errors %}
+            <div class="msg">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="field">
+          <label>{{ form.referencia.label }}</label>
+          {{ form.referencia }}
+          {% for err in form.referencia.errors %}
+            <div class="msg">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="row">
+          <button class="btn primary" type="submit">Guardar movimiento</button>
+          <a class="btn warn" href="{% url 'caja:arqueo' %}">Volver a arqueo</a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

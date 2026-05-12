@@ -7,19 +7,38 @@
       <h1>Arqueo de Caja</h1>
 
       <div class="msg">
-        Caja ID <b>{{ caja.id }}</b> · Abierta: <b>{{ caja.fecha_apertura }}</b> · Apertura: <b>{{ caja.monto_apertura }}</b>
+        Caja <b>{{ caja.caja.numero }}</b> ·
+        Sesión ID <b>{{ caja.id }}</b> ·
+        Abierta: <b>{{ caja.fecha_apertura|date:"d/m/Y H:i" }}</b> ·
+        Apertura: <b>{{ caja.monto_apertura }}</b>
       </div>
 
       <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
-        <h3>Resumen</h3>
+        <h3>Resumen general</h3>
         <div class="msg">Total ventas: <b>{{ total_ventas }}</b></div>
         <div class="msg">Total ingresos: <b>{{ total_ingresos }}</b></div>
         <div class="msg">Total egresos: <b>{{ total_egresos }}</b></div>
-        <div class="msg">Esperado en caja: <b>{{ esperado }}</b></div>
+      </div>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Detalle por método de pago</h3>
+        <div class="msg">Ventas en efectivo: <b>{{ ventas_efectivo }}</b></div>
+        <div class="msg">Ventas con tarjeta: <b>{{ ventas_tarjeta }}</b></div>
+        <div class="msg">Ventas con QR: <b>{{ ventas_qr }}</b></div>
+      </div>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Efectivo esperado en caja</h3>
+        <div class="msg">
+          Fórmula: ingresos + ventas en efectivo - egresos
+        </div>
+        <div class="msg">Esperado físico: <b>{{ esperado }}</b></div>
       </div>
 
       <div class="row" style="margin-top:14px">
         <a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>
+        <a class="btn primary" href="{% url 'caja:movimiento' %}">Registrar movimiento</a>
+        <a class="btn warn" href="{% url 'caja:historial_cierres' %}">Historial de cierres</a>
         <a class="btn danger" href="{% url 'caja:cierre' %}">Cerrar caja</a>
       </div>
     </section>
@@ -29,8 +48,14 @@
       {% if movimientos %}
         {% for m in movimientos %}
           <div class="msg">
-            <b>{{ m.tipo }}</b> · {{ m.monto }}<br>
-            <span class="muted">{{ m.creado_en }} · {{ m.referencia }} · {{ m.motivo }}</span>
+            <b>{{ m.get_tipo_display }}</b>
+            {% if m.metodo_pago %} · {{ m.get_metodo_pago_display }}{% endif %}
+            · {{ m.monto }}<br>
+            <span class="muted">
+              {{ m.creado_en|date:"d/m/Y H:i" }}
+              {% if m.referencia %} · {{ m.referencia }}{% endif %}
+              {% if m.motivo %} · {{ m.motivo }}{% endif %}
+            </span>
           </div>
         {% endfor %}
       {% else %}

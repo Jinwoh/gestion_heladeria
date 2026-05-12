@@ -120,23 +120,20 @@ def crear_venta(*, usuario, items, pagos):
     venta.save(update_fields=["total"])
 
     for pago in clean_pagos:
-        VentaPago.objects.create(
+        pago_obj = VentaPago.objects.create(
             venta=venta,
             metodo_pago=pago["metodo_pago"],
             monto=pago["monto"],
         )
 
-    metodos_txt = ", ".join(
-        dict(VentaPago.MetodoPago.choices)[p["metodo_pago"]] for p in clean_pagos
-    )
-
-    MovimientoCaja.objects.create(
-        caja_sesion=caja,
-        tipo=MovimientoCaja.Tipo.VENTA,
-        monto=total,
-        referencia=f"venta:{venta.id}",
-        motivo=f"Venta POS - {metodos_txt}",
-        usuario=usuario,
-    )
+        MovimientoCaja.objects.create(
+            caja_sesion=caja,
+            tipo=MovimientoCaja.Tipo.VENTA,
+            monto=pago["monto"],
+            metodo_pago=pago["metodo_pago"],
+            referencia=f"venta:{venta.id}:pago:{pago_obj.id}",
+            motivo=f"Venta POS - {pago_obj.get_metodo_pago_display()}",
+            usuario=usuario,
+        )
 
     return venta

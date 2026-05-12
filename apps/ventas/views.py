@@ -201,7 +201,7 @@ def pos_view(request):
                 _clear_cart(request.session)
                 messages.success(
                     request,
-                    f"Venta #{venta.id} confirmada. Total: {venta.total}"
+                    f"Venta #{venta.id} confirmada. Total: {venta.total} · {venta.pagos_resumen}"
                 )
                 return redirect("ventas:pos")
             except ValidationError as e:
