@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -23,6 +25,7 @@ class Venta(models.Model):
 
     fecha = models.DateTimeField(auto_now_add=True)
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    vuelto = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     estado = models.CharField(
         max_length=12,
         choices=Estado.choices,
@@ -36,6 +39,33 @@ class Venta(models.Model):
 
     def __str__(self):
         return f"Venta #{self.id} - {self.total}"
+
+    def monto_por_metodo(self, metodo_pago: str) -> Decimal:
+        return sum(
+            (p.monto for p in self.pagos.filter(metodo_pago=metodo_pago)),
+            Decimal("0"),
+        )
+
+    @property
+    def total_efectivo(self) -> Decimal:
+        return self.monto_por_metodo(VentaPago.MetodoPago.EFECTIVO)
+
+    @property
+    def total_tarjeta(self) -> Decimal:
+        return self.monto_por_metodo(VentaPago.MetodoPago.TARJETA)
+
+    @property
+    def total_qr(self) -> Decimal:
+        return self.monto_por_metodo(VentaPago.MetodoPago.QR)
+
+    @property
+    def pagos_resumen(self) -> str:
+        partes = []
+        for pago in self.pagos.all():
+            partes.append(f"{pago.get_metodo_pago_display()}: {pago.monto}")
+        if self.vuelto > 0:
+            partes.append(f"Vuelto: {self.vuelto}")
+        return " | ".join(partes) if partes else "-"
 
 
 class VentaPago(models.Model):
@@ -84,4 +114,3 @@ class VentaDetalle(models.Model):
 
     def __str__(self):
         return f"{self.producto.nombre} x{self.cantidad}"
-    

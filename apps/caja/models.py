@@ -74,20 +74,22 @@ class MovimientoCaja(models.Model):
         TARJETA = "tarjeta", "Tarjeta"
         QR = "qr", "QR"
 
-    caja_sesion = models.ForeignKey(
-        CajaSesion,
-        on_delete=models.PROTECT,
-        related_name="movimientos",
-    )
-    tipo = models.CharField(max_length=10, choices=Tipo.choices)
-    monto = models.DecimalField(max_digits=12, decimal_places=2)
-
     metodo_pago = models.CharField(
         max_length=12,
         choices=MetodoPago.choices,
         blank=True,
         null=True,
     )
+
+    caja_sesion = models.ForeignKey(
+        CajaSesion,
+        on_delete=models.PROTECT,
+        related_name="movimientos",
+    )
+
+
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
 
     referencia = models.CharField(max_length=80, blank=True)
     motivo = models.CharField(max_length=255, blank=True)

@@ -1,7 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import redirect, render
@@ -37,21 +37,56 @@ def _parse_decimal(value, default="0"):
         return Decimal(default)
 
 
+def _get_stock_disponible(producto_id, stock_map):
+    stock_disponible = stock_map.get(producto_id)
+    if stock_disponible is None:
+        stock_item = Stock.objects.filter(producto_id=producto_id).first()
+        stock_disponible = stock_item.cantidad if stock_item else 0
+    return stock_disponible
+
+
 @login_required
+@permission_required("ventas.add_venta", raise_exception=True)
 def pos_view(request):
     caja = get_caja_abierta(request.user)
 
-    productos = (
+    q = request.GET.get("q", "").strip()
+    categoria_id = request.GET.get("categoria", "").strip()
+
+    productos_qs = (
         Producto.objects.filter(activo=True)
         .select_related("categoria")
         .prefetch_related("stock")
         .order_by("categoria__orden", "categoria__nombre", "nombre")
     )
 
+    if q:
+        productos_qs = productos_qs.filter(nombre__icontains=q)
+
+    if categoria_id:
+        try:
+            productos_qs = productos_qs.filter(categoria_id=int(categoria_id))
+        except ValueError:
+            pass
+
+    productos = list(productos_qs)
+
+    categorias = (
+        Producto.objects.filter(activo=True)
+        .select_related("categoria")
+        .values_list("categoria_id", "categoria__nombre")
+        .distinct()
+        .order_by("categoria__nombre")
+    )
+
     stocks = Stock.objects.filter(producto__in=productos).select_related("producto")
     stock_map = {s.producto_id: s.cantidad for s in stocks}
 
-    productos_map = {p.id: p for p in productos}
+    productos_map = {
+        p.id: p
+        for p in Producto.objects.filter(activo=True).select_related("categoria")
+    }
+
     cart = _get_cart(request.session)
 
     if request.method == "POST":
@@ -78,7 +113,7 @@ def pos_view(request):
                 messages.error(request, "El producto no existe o no está activo.")
                 return redirect("ventas:pos")
 
-            stock_disponible = stock_map.get(producto_id, 0)
+            stock_disponible = _get_stock_disponible(producto_id, stock_map)
             cantidad_actual = int(cart.get(str(producto_id), 0))
             nueva_cantidad = cantidad_actual + cantidad
 
@@ -109,7 +144,7 @@ def pos_view(request):
                 messages.error(request, "El producto ya no está disponible.")
                 return redirect("ventas:pos")
 
-            stock_disponible = stock_map.get(producto_id, 0)
+            stock_disponible = _get_stock_disponible(producto_id, stock_map)
 
             if cantidad <= 0:
                 cart.pop(str(producto_id), None)
@@ -199,10 +234,14 @@ def pos_view(request):
                     pagos=pagos,
                 )
                 _clear_cart(request.session)
-                messages.success(
-                    request,
-                    f"Venta #{venta.id} confirmada. Total: {venta.total} · {venta.pagos_resumen}"
-                )
+
+                msg = f"Venta #{venta.id} confirmada. Total: {venta.total}"
+                if getattr(venta, "vuelto", Decimal("0")) > 0:
+                    msg += f" · Vuelto: {venta.vuelto}"
+                if hasattr(venta, "pagos_resumen"):
+                    msg += f" · {venta.pagos_resumen}"
+
+                messages.success(request, msg)
                 return redirect("ventas:pos")
             except ValidationError as e:
                 messages.error(request, e.message)
@@ -229,6 +268,8 @@ def pos_view(request):
         subtotal = precio * cantidad_int
         carrito_total += subtotal
 
+        stock_valor = _get_stock_disponible(producto.id, stock_map)
+
         carrito_items.append({
             "producto_id": producto.id,
             "nombre": producto.nombre,
@@ -236,7 +277,7 @@ def pos_view(request):
             "precio": precio,
             "cantidad": cantidad_int,
             "subtotal": subtotal,
-            "stock": stock_map.get(producto.id, 0),
+            "stock": stock_valor,
         })
 
     ctx = {
@@ -245,11 +286,15 @@ def pos_view(request):
         "stock_map": stock_map,
         "carrito_items": carrito_items,
         "carrito_total": carrito_total,
+        "categorias": categorias,
+        "q": q,
+        "categoria_id": categoria_id,
     }
     return render(request, "pos/pos.html", ctx)
 
 
 @login_required
+@permission_required("productos.view_producto", raise_exception=True)
 def lista_productos(request):
     q = request.GET.get("q", "").strip()
     categoria_id = request.GET.get("categoria", "").strip()

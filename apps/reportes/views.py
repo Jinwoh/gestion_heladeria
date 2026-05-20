@@ -2,8 +2,8 @@ from datetime import datetime
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required, permission_required
+from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 
 from apps.ventas.models import Venta
@@ -41,10 +41,15 @@ def _puede_ver_reportes_global(user):
 
 
 def _puede_ver_cierres(user):
-    return user.is_superuser or user.has_perm("caja.view_cajasesion") or user.has_perm("ventas.view_venta")
+    return (
+        user.is_superuser
+        or user.has_perm("caja.view_cajasesion")
+        or user.has_perm("ventas.view_venta")
+    )
 
 
 @login_required
+@permission_required("ventas.view_venta", raise_exception=True)
 def reporte_dia(request):
     fecha = timezone.localdate()
     puede_ver_global = _puede_ver_reportes_global(request.user)
@@ -82,6 +87,7 @@ def reporte_dia(request):
 
 
 @login_required
+@permission_required("ventas.view_venta", raise_exception=True)
 def reporte_general(request):
     hoy = timezone.localdate()
 
@@ -220,17 +226,19 @@ def reporte_general(request):
 
 
 @login_required
+@permission_required("ventas.view_venta", raise_exception=True)
 def detalle_venta(request, venta_id):
     puede_ver_global = _puede_ver_reportes_global(request.user)
 
     venta = get_object_or_404(
-        Venta.objects.select_related("usuario", "caja_sesion").prefetch_related("detalles", "detalles__producto", "pagos"),
+        Venta.objects.select_related("usuario", "caja_sesion")
+        .prefetch_related("detalles", "detalles__producto", "pagos"),
         pk=venta_id,
         estado=Venta.Estado.CONFIRMADA,
     )
 
     if not puede_ver_global and venta.usuario != request.user:
         messages.error(request, "No tenés permisos para ver esa venta.")
-        return render(request, "reportes/detalle_venta.html", {"venta": None})
+        return redirect("reportes:reporte_dia")
 
     return render(request, "reportes/detalle_venta.html", {"venta": venta})

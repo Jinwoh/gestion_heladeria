@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.shortcuts import redirect, render
@@ -18,6 +18,7 @@ from .services import (
 
 
 @login_required
+@permission_required("caja.add_cajasesion", raise_exception=True)
 def apertura_caja(request):
     caja_abierta = get_caja_abierta(request.user)
 
@@ -54,6 +55,7 @@ def apertura_caja(request):
 
 
 @login_required
+@permission_required("caja.view_cajasesion", raise_exception=True)
 def arqueo_caja(request):
     caja = get_caja_abierta(request.user)
 
@@ -110,6 +112,7 @@ def arqueo_caja(request):
 
 
 @login_required
+@permission_required("caja.add_movimientocaja", raise_exception=True)
 def movimiento_caja(request):
     caja = get_caja_abierta(request.user)
 
@@ -152,6 +155,7 @@ def movimiento_caja(request):
 
 
 @login_required
+@permission_required("caja.change_cajasesion", raise_exception=True)
 def cierre_caja(request):
     caja = get_caja_abierta(request.user)
 
@@ -235,6 +239,7 @@ def cierre_caja(request):
 
 
 @login_required
+@permission_required("caja.view_cajasesion", raise_exception=True)
 def historial_cierres(request):
     sesiones = (
         CajaSesion.objects.select_related("caja", "usuario")
@@ -242,7 +247,7 @@ def historial_cierres(request):
         .order_by("-fecha_cierre", "-fecha_apertura")
     )
 
-    if not request.user.is_superuser:
+    if not request.user.is_superuser and not request.user.has_perm("ventas.view_venta"):
         sesiones = sesiones.filter(usuario=request.user)
 
     historial = []

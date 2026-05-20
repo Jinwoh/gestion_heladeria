@@ -84,6 +84,7 @@ def crear_venta(*, usuario, items, pagos):
         caja_sesion=caja,
         usuario=usuario,
         total=Decimal("0"),
+        vuelto=Decimal("0"),
     )
 
     for it in clean_items:
@@ -110,14 +111,30 @@ def crear_venta(*, usuario, items, pagos):
         total += subtotal
 
     total_pagos = sum((p["monto"] for p in clean_pagos), Decimal("0"))
+    monto_efectivo = sum(
+        (p["monto"] for p in clean_pagos if p["metodo_pago"] == VentaPago.MetodoPago.EFECTIVO),
+        Decimal("0"),
+    )
+    monto_no_efectivo = total_pagos - monto_efectivo
 
-    if total_pagos != total:
+    if total_pagos < total:
         raise ValidationError(
-            f"La suma de los pagos ({total_pagos}) no coincide con el total de la venta ({total})."
+            f"La suma de los pagos ({total_pagos}) no alcanza el total de la venta ({total})."
         )
 
+    # El excedente solo se admite si viene por efectivo
+    saldo_a_cubrir_con_efectivo = total - monto_no_efectivo
+    if saldo_a_cubrir_con_efectivo < 0:
+        saldo_a_cubrir_con_efectivo = Decimal("0")
+
+    if monto_efectivo < saldo_a_cubrir_con_efectivo:
+        raise ValidationError("El monto en efectivo no alcanza para cubrir el saldo restante.")
+
+    vuelto = monto_efectivo - saldo_a_cubrir_con_efectivo
+
     venta.total = total
-    venta.save(update_fields=["total"])
+    venta.vuelto = vuelto
+    venta.save(update_fields=["total", "vuelto"])
 
     for pago in clean_pagos:
         pago_obj = VentaPago.objects.create(
@@ -126,10 +143,15 @@ def crear_venta(*, usuario, items, pagos):
             monto=pago["monto"],
         )
 
+        # En caja física solo entra efectivo neto del vuelto
+        monto_movimiento = pago["monto"]
+        if pago["metodo_pago"] == VentaPago.MetodoPago.EFECTIVO and vuelto > 0:
+            monto_movimiento = pago["monto"] - vuelto
+
         MovimientoCaja.objects.create(
             caja_sesion=caja,
             tipo=MovimientoCaja.Tipo.VENTA,
-            monto=pago["monto"],
+            monto=monto_movimiento,
             metodo_pago=pago["metodo_pago"],
             referencia=f"venta:{venta.id}:pago:{pago_obj.id}",
             motivo=f"Venta POS - {pago_obj.get_metodo_pago_display()}",
