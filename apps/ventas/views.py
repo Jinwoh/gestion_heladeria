@@ -1,10 +1,10 @@
 from decimal import Decimal, InvalidOperation
-
+from .models import Venta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 
 from apps.caja.services import get_caja_abierta
 from apps.inventario.models import Stock
@@ -111,7 +111,7 @@ def pos_view(request):
             producto = productos_map.get(producto_id)
             if not producto:
                 messages.error(request, "El producto no existe o no está activo.")
-                return redirect("ventas:pos")
+                return redirect("ventas:ticket", venta_id=venta.id)
 
             stock_disponible = _get_stock_disponible(producto_id, stock_map)
             cantidad_actual = int(cart.get(str(producto_id), 0))
@@ -344,3 +344,21 @@ def lista_productos(request):
         "estado": estado,
     }
     return render(request, "productos/productos.html", ctx)
+
+@login_required
+@permission_required("ventas.view_venta", raise_exception=True)
+def ticket_venta(request, venta_id):
+    venta = get_object_or_404(
+        Venta.objects.select_related("usuario", "caja_sesion", "caja_sesion__caja")
+        .prefetch_related("detalles", "detalles__producto", "pagos"),
+        pk=venta_id,
+        estado=Venta.Estado.CONFIRMADA,
+    )
+
+    puede_ver_global = request.user.is_superuser or request.user.has_perm("ventas.view_venta")
+
+    if not puede_ver_global and venta.usuario != request.user:
+        messages.error(request, "No tenés permisos para ver ese ticket.")
+        return redirect("ventas:pos")
+
+    return render(request, "ventas/ticket.html", {"venta": venta})

@@ -5,6 +5,7 @@ from django.db import models
 
 from apps.caja.models import CajaSesion
 from apps.productos.models import Producto
+from apps.clientes.models import Cliente
 
 
 class Venta(models.Model):
@@ -21,6 +22,13 @@ class Venta(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="ventas",
+    )
+    cliente = models.ForeignKey(
+        Cliente,
+        on_delete=models.PROTECT,
+        related_name="ventas",
+        null=True,
+        blank=True,
     )
 
     fecha = models.DateTimeField(auto_now_add=True)
