@@ -12,7 +12,7 @@ from .models import Venta, VentaDetalle, VentaPago
 
 
 @transaction.atomic
-def crear_venta(*, usuario, items, pagos):
+def crear_venta(*, usuario, items, pagos, cliente=None):
     """
     items = [{"producto_id": int, "cantidad": int}, ...]
     pagos = [{"metodo_pago": "efectivo|tarjeta|qr", "monto": Decimal}, ...]
@@ -83,6 +83,7 @@ def crear_venta(*, usuario, items, pagos):
     venta = Venta.objects.create(
         caja_sesion=caja,
         usuario=usuario,
+        cliente=cliente,
         total=Decimal("0"),
         vuelto=Decimal("0"),
     )

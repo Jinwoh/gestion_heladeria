@@ -12,6 +12,19 @@
         <div class="msg">Caja: <b>{{ venta.caja_sesion.caja.numero }}</b></div>
         <div class="msg">Sesión: <b>#{{ venta.caja_sesion.id }}</b></div>
         <div class="msg">Cajero: <b>{{ venta.usuario.username }}</b></div>
+        <div class="msg">
+          Cliente:
+          <b>
+            {% if venta.cliente %}
+              {{ venta.cliente.nombre_completo }} - {{ venta.cliente.documento }}
+            {% else %}
+              Consumidor final
+            {% endif %}
+          </b>
+        </div>
+        {% if venta.cliente and venta.cliente.telefono %}
+          <div class="msg">Teléfono: <b>{{ venta.cliente.telefono }}</b></div>
+        {% endif %}
         <div class="msg">Total: <b>{{ venta.total|gs }}</b></div>
         {% if venta.vuelto > 0 %}
           <div class="msg">Vuelto: <b>{{ venta.vuelto|gs }}</b></div>

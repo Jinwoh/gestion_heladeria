@@ -1,5 +1,5 @@
 from decimal import Decimal, InvalidOperation
-from .models import Venta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
@@ -9,7 +9,9 @@ from django.shortcuts import redirect, render, get_object_or_404
 from apps.caja.services import get_caja_abierta
 from apps.inventario.models import Stock
 from apps.productos.models import Producto
+from apps.clientes.models import Cliente
 
+from .models import Venta
 from .services import crear_venta
 
 
@@ -79,6 +81,8 @@ def pos_view(request):
         .order_by("categoria__nombre")
     )
 
+    clientes = Cliente.objects.filter(activo=True).order_by("nombre", "apellido")
+
     stocks = Stock.objects.filter(producto__in=productos).select_related("producto")
     stock_map = {s.producto_id: s.cantidad for s in stocks}
 
@@ -111,7 +115,7 @@ def pos_view(request):
             producto = productos_map.get(producto_id)
             if not producto:
                 messages.error(request, "El producto no existe o no está activo.")
-                return redirect("ventas:ticket", venta_id=venta.id)
+                return redirect("ventas:pos")
 
             stock_disponible = _get_stock_disponible(producto_id, stock_map)
             cantidad_actual = int(cart.get(str(producto_id), 0))
@@ -211,6 +215,15 @@ def pos_view(request):
                 messages.error(request, "El carrito no contiene productos válidos.")
                 return redirect("ventas:pos")
 
+            cliente_id = request.POST.get("cliente_id", "").strip()
+            cliente = None
+            if cliente_id:
+                try:
+                    cliente = Cliente.objects.get(pk=int(cliente_id), activo=True)
+                except (ValueError, Cliente.DoesNotExist):
+                    messages.error(request, "Cliente inválido.")
+                    return redirect("ventas:pos")
+
             monto_efectivo = _parse_decimal(request.POST.get("monto_efectivo"))
             monto_tarjeta = _parse_decimal(request.POST.get("monto_tarjeta"))
             monto_qr = _parse_decimal(request.POST.get("monto_qr"))
@@ -232,6 +245,7 @@ def pos_view(request):
                     usuario=request.user,
                     items=items,
                     pagos=pagos,
+                    cliente=cliente,
                 )
                 _clear_cart(request.session)
 
@@ -242,7 +256,7 @@ def pos_view(request):
                     msg += f" · {venta.pagos_resumen}"
 
                 messages.success(request, msg)
-                return redirect("ventas:pos")
+                return redirect("ventas:ticket", venta_id=venta.id)
             except ValidationError as e:
                 messages.error(request, e.message)
             except Exception as e:
@@ -287,6 +301,7 @@ def pos_view(request):
         "carrito_items": carrito_items,
         "carrito_total": carrito_total,
         "categorias": categorias,
+        "clientes": clientes,
         "q": q,
         "categoria_id": categoria_id,
     }
@@ -345,20 +360,15 @@ def lista_productos(request):
     }
     return render(request, "productos/productos.html", ctx)
 
+
 @login_required
 @permission_required("ventas.view_venta", raise_exception=True)
 def ticket_venta(request, venta_id):
     venta = get_object_or_404(
-        Venta.objects.select_related("usuario", "caja_sesion", "caja_sesion__caja")
+        Venta.objects.select_related("usuario", "caja_sesion", "caja_sesion__caja", "cliente")
         .prefetch_related("detalles", "detalles__producto", "pagos"),
         pk=venta_id,
         estado=Venta.Estado.CONFIRMADA,
     )
-
-    puede_ver_global = request.user.is_superuser or request.user.has_perm("ventas.view_venta")
-
-    if not puede_ver_global and venta.usuario != request.user:
-        messages.error(request, "No tenés permisos para ver ese ticket.")
-        return redirect("ventas:pos")
 
     return render(request, "ventas/ticket.html", {"venta": venta})
