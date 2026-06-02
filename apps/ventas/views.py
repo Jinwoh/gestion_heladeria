@@ -215,14 +215,40 @@ def pos_view(request):
                 messages.error(request, "El carrito no contiene productos válidos.")
                 return redirect("ventas:pos")
 
-            cliente_id = request.POST.get("cliente_id", "").strip()
             cliente = None
-            if cliente_id:
-                try:
-                    cliente = Cliente.objects.get(pk=int(cliente_id), activo=True)
-                except (ValueError, Cliente.DoesNotExist):
-                    messages.error(request, "Cliente inválido.")
+            cliente_nuevo = request.POST.get("cliente_nuevo", "").strip()
+
+            if cliente_nuevo == "1":
+                nombre = request.POST.get("cliente_nombre", "").strip()
+                apellido = request.POST.get("cliente_apellido", "").strip()
+                documento = request.POST.get("cliente_documento", "").strip()
+                telefono = request.POST.get("cliente_telefono", "").strip()
+                email = request.POST.get("cliente_email", "").strip()
+
+                if not nombre or not documento:
+                    messages.error(request, "Para alta rápida, nombre y documento son obligatorios.")
                     return redirect("ventas:pos")
+
+                if Cliente.objects.filter(documento=documento).exists():
+                    messages.error(request, "Ya existe un cliente con ese documento.")
+                    return redirect("ventas:pos")
+
+                cliente = Cliente.objects.create(
+                    nombre=nombre,
+                    apellido=apellido,
+                    documento=documento,
+                    telefono=telefono,
+                    email=email,
+                    activo=True,
+                )
+            else:
+                cliente_id = request.POST.get("cliente_id", "").strip()
+                if cliente_id:
+                    try:
+                        cliente = Cliente.objects.get(pk=int(cliente_id), activo=True)
+                    except (ValueError, Cliente.DoesNotExist):
+                        messages.error(request, "Cliente inválido.")
+                        return redirect("ventas:pos")
 
             monto_efectivo = _parse_decimal(request.POST.get("monto_efectivo"))
             monto_tarjeta = _parse_decimal(request.POST.get("monto_tarjeta"))
@@ -249,7 +275,7 @@ def pos_view(request):
                 )
                 _clear_cart(request.session)
 
-                msg = f"Venta #{venta.id} confirmada. Total: {venta.total}"
+                msg = f"Ticket #{venta.numero_ticket:08d} confirmado. Total: {venta.total}"
                 if getattr(venta, "vuelto", Decimal("0")) > 0:
                     msg += f" · Vuelto: {venta.vuelto}"
                 if hasattr(venta, "pagos_resumen"):
@@ -371,4 +397,16 @@ def ticket_venta(request, venta_id):
         estado=Venta.Estado.CONFIRMADA,
     )
 
-    return render(request, "ventas/ticket.html", {"venta": venta})
+    total = venta.total
+    iva_10 = total / Decimal("11")
+    total_gravado = total - iva_10
+
+    ctx = {
+        "venta": venta,
+        "comercio_nombre": "Heladería Atenas",
+        "comercio_direccion": "Asunción, sobre Eusebio Ayala y Kubicheck",
+        "comercio_ruc": "5099245-0",
+        "iva_10": iva_10,
+        "total_gravado": total_gravado,
+    }
+    return render(request, "ventas/ticket.html", ctx)

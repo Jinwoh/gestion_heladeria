@@ -90,6 +90,9 @@
               {% if perms.caja.view_cajasesion %}
                 <a href="{% url 'caja:historial_cierres' %}" class="dropdown-item">Historial de cierres</a>
               {% endif %}
+              {% if perms.clientes.view_cliente %}
+                <a href="{% url 'clientes:lista' %}" class="dropdown-item">Clientes</a>
+              {% endif %}
             </div>
           </div>
           {% endif %}

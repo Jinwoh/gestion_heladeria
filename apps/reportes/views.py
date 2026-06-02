@@ -52,6 +52,8 @@ def _puede_ver_cierres(user):
 @permission_required("ventas.view_venta", raise_exception=True)
 def reporte_dia(request):
     fecha = timezone.localdate()
+    numero_ticket = request.GET.get("numero_ticket", "").strip()
+
     puede_ver_global = _puede_ver_reportes_global(request.user)
     usuario_filtro = None if puede_ver_global else request.user
 
@@ -60,8 +62,17 @@ def reporte_dia(request):
     ventas = (
         ventas_del_dia_qs(fecha=fecha, usuario=usuario_filtro)
         .order_by("-fecha")
-        .prefetch_related("detalles", "detalles__producto", "pagos")[:50]
+        .prefetch_related("detalles", "detalles__producto", "pagos")
     )
+
+    if numero_ticket:
+        try:
+            ventas = ventas.filter(numero_ticket=int(numero_ticket))
+        except ValueError:
+            ventas = ventas.none()
+            messages.error(request, "Número de ticket inválido.")
+
+    ventas = ventas[:50]
 
     por_metodo = ventas_por_metodo_pago(
         fecha_desde=fecha,
@@ -82,6 +93,7 @@ def reporte_dia(request):
         "por_metodo": por_metodo,
         "top_productos": top_productos,
         "puede_ver_global": puede_ver_global,
+        "numero_ticket": numero_ticket,
     }
     return render(request, "reportes/dia.html", ctx)
 
@@ -95,6 +107,7 @@ def reporte_general(request):
     fecha_hasta = _parse_date(request.GET.get("fecha_hasta")) or hoy
     metodo_pago = request.GET.get("metodo_pago", "").strip()
     usuario_id = request.GET.get("usuario", "").strip()
+    numero_ticket = request.GET.get("numero_ticket", "").strip()
 
     if fecha_desde > fecha_hasta:
         messages.error(request, "La fecha desde no puede ser mayor que la fecha hasta.")
@@ -130,8 +143,17 @@ def reporte_general(request):
             metodo_pago=metodo_pago or None,
         )
         .order_by("-fecha")
-        .prefetch_related("detalles", "detalles__producto", "pagos")[:100]
+        .prefetch_related("detalles", "detalles__producto", "pagos")
     )
+
+    if numero_ticket:
+        try:
+            ventas = ventas.filter(numero_ticket=int(numero_ticket))
+        except ValueError:
+            ventas = ventas.none()
+            messages.error(request, "Número de ticket inválido.")
+
+    ventas = ventas[:100]
 
     por_metodo = ventas_por_metodo_pago(
         fecha_desde=fecha_desde,
@@ -206,6 +228,7 @@ def reporte_general(request):
         "fecha_hasta": fecha_hasta,
         "metodo_pago": metodo_pago,
         "usuario_id": usuario_id,
+        "numero_ticket": numero_ticket,
         "usuarios": usuarios,
         "kpis": kpis,
         "ventas": ventas,
@@ -231,7 +254,7 @@ def detalle_venta(request, venta_id):
     puede_ver_global = _puede_ver_reportes_global(request.user)
 
     venta = get_object_or_404(
-        Venta.objects.select_related("usuario", "caja_sesion")
+        Venta.objects.select_related("usuario", "caja_sesion", "cliente")
         .prefetch_related("detalles", "detalles__producto", "pagos"),
         pk=venta_id,
         estado=Venta.Estado.CONFIRMADA,

@@ -29,6 +29,11 @@
             </select>
           </div>
 
+          <div class="field">
+            <label for="id_numero_ticket">N° Ticket</label>
+            <input type="text" id="id_numero_ticket" name="numero_ticket" value="{{ numero_ticket }}" placeholder="Ej.: 00000015">
+          </div>
+
           {% if puede_ver_global %}
           <div class="field">
             <label for="id_usuario">Usuario</label>
@@ -235,7 +240,7 @@
             <table style="width:100%;border-collapse:collapse">
               <thead>
                 <tr>
-                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">ID</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Ticket</th>
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Fecha</th>
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Usuario</th>
                   <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Pagos</th>
@@ -246,7 +251,7 @@
                 {% for v in ventas %}
                   <tr>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">
-                      <a href="{% url 'reportes:detalle_venta' v.id %}"><b>#{{ v.id }}</b></a>
+                      <a href="{% url 'reportes:detalle_venta' v.id %}"><b>#{{ v.numero_ticket|stringformat:"08d" }}</b></a>
                     </td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.fecha|date:"d/m/Y H:i" }}</td>
                     <td style="padding:10px;border-bottom:1px solid var(--border)">{{ v.usuario.username }}</td>

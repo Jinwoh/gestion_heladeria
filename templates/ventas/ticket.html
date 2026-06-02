@@ -3,73 +3,223 @@
 {% block title %}Ticket de venta{% endblock %}
 
 {% block content %}
-  <div class="grid">
-    <section class="card">
-      <h1>Ticket de venta #{{ venta.id }}</h1>
+<style>
+  @media print {
+    header,
+    .topbar,
+    .nav,
+    .userbox,
+    .messages,
+    .messages-floating,
+    .footer,
+    .ticket-actions {
+      display: none !important;
+    }
 
-      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
-        <div class="msg">Fecha: <b>{{ venta.fecha|date:"d/m/Y H:i" }}</b></div>
-        <div class="msg">Caja: <b>{{ venta.caja_sesion.caja.numero }}</b></div>
-        <div class="msg">Sesión: <b>#{{ venta.caja_sesion.id }}</b></div>
-        <div class="msg">Cajero: <b>{{ venta.usuario.username }}</b></div>
-        <div class="msg">
-          Cliente:
-          <b>
-            {% if venta.cliente %}
-              {{ venta.cliente.nombre_completo }} - {{ venta.cliente.documento }}
-            {% else %}
-              Consumidor final
-            {% endif %}
-          </b>
+    body,
+    main,
+    .container,
+    .grid,
+    .card,
+    section,
+    div {
+      background: #fff !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+
+    body * {
+      visibility: hidden;
+    }
+
+    #ticket-print,
+    #ticket-print * {
+      visibility: visible;
+    }
+
+    #ticket-print {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 80mm;
+      max-width: 80mm;
+      padding: 8px;
+      color: #000 !important;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    #ticket-print table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #ticket-print th,
+    #ticket-print td {
+      padding: 4px 2px;
+      font-size: 11px;
+      color: #000 !important;
+      border-bottom: 1px dashed #000;
+    }
+
+    #ticket-print h1,
+    #ticket-print h2,
+    #ticket-print h3,
+    #ticket-print p,
+    #ticket-print div,
+    #ticket-print span,
+    #ticket-print b,
+    #ticket-print small {
+      color: #000 !important;
+    }
+  }
+
+  .ticket-box {
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .ticket-head,
+  .ticket-foot,
+  .ticket-block {
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(15,23,42,.55);
+  }
+
+  .ticket-center {
+    text-align: center;
+  }
+
+  .ticket-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 6px 0;
+  }
+
+  .ticket-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+  }
+
+  .ticket-table th,
+  .ticket-table td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ticket-table th {
+    text-align: left;
+  }
+
+  .ticket-right {
+    text-align: right;
+  }
+</style>
+
+<div class="ticket-box">
+  <section class="card" id="ticket-print">
+    <div class="ticket-head ticket-center">
+      <h2 style="margin:0">{{ comercio_nombre }}</h2>
+      <div>{{ comercio_direccion }}</div>
+      <div>RUC: {{ comercio_ruc }}</div>
+      <div style="margin-top:8px"><b>TICKET / COMPROBANTE DE VENTA</b></div>
+    </div>
+
+    <div class="ticket-block">
+      <div class="ticket-line">
+        <span><b>Ticket N°</b></span>
+        <span>{{ venta.numero_ticket|stringformat:"08d" }}</span>
+      </div>
+      <div class="ticket-line">
+        <span><b>Fecha</b></span>
+        <span>{{ venta.fecha|date:"d/m/Y" }}</span>
+      </div>
+      <div class="ticket-line">
+        <span><b>Hora</b></span>
+        <span>{{ venta.fecha|date:"H:i" }}</span>
+      </div>
+      <div class="ticket-line">
+        <span><b>Cliente</b></span>
+        <span>
+          {% if venta.cliente %}
+            {{ venta.cliente.nombre_completo }}
+          {% else %}
+            Consumidor final
+          {% endif %}
+        </span>
+      </div>
+      {% if venta.cliente %}
+      <div class="ticket-line">
+        <span><b>Documento</b></span>
+        <span>{{ venta.cliente.documento }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="ticket-block">
+      <table class="ticket-table">
+        <thead>
+          <tr>
+            <th>Descripción</th>
+            <th class="ticket-right">Cant.</th>
+            <th class="ticket-right">P. Unit.</th>
+            <th class="ticket-right">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in venta.detalles.all %}
+          <tr>
+            <td>{{ d.producto.nombre }}</td>
+            <td class="ticket-right">{{ d.cantidad }}</td>
+            <td class="ticket-right">{{ d.precio_unitario|gs }}</td>
+            <td class="ticket-right">{{ d.subtotal|gs }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ticket-block">
+      <div><b>Método de pago</b></div>
+      {% for pago in venta.pagos.all %}
+        <div class="ticket-line">
+          <span>{{ pago.get_metodo_pago_display }}</span>
+          <span>{{ pago.monto|gs }}</span>
         </div>
-        {% if venta.cliente and venta.cliente.telefono %}
-          <div class="msg">Teléfono: <b>{{ venta.cliente.telefono }}</b></div>
-        {% endif %}
-        <div class="msg">Total: <b>{{ venta.total|gs }}</b></div>
-        {% if venta.vuelto > 0 %}
-          <div class="msg">Vuelto: <b>{{ venta.vuelto|gs }}</b></div>
-        {% endif %}
-      </div>
+      {% empty %}
+        <div>Sin pagos registrados</div>
+      {% endfor %}
+    </div>
 
-      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
-        <h3>Productos</h3>
-        <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
-          <table style="width:100%;border-collapse:collapse">
-            <thead>
-              <tr>
-                <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Producto</th>
-                <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Cant.</th>
-                <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">P. unitario</th>
-                <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for d in venta.detalles.all %}
-                <tr>
-                  <td style="padding:10px;border-bottom:1px solid var(--border)">{{ d.producto.nombre }}</td>
-                  <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ d.cantidad }}</td>
-                  <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ d.precio_unitario|gs }}</td>
-                  <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">{{ d.subtotal|gs }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+    <div class="ticket-foot">
+      <div class="ticket-line">
+        <span>Total gravado 10%</span>
+        <span>{{ total_gravado|gs }}</span>
       </div>
+      <div class="ticket-line">
+        <span>IVA 10%</span>
+        <span>{{ iva_10|gs }}</span>
+      </div>
+      <div class="ticket-line">
+        <span><b>Total</b></span>
+        <span><b>{{ venta.total|gs }}</b></span>
+      </div>
+      {% if venta.vuelto > 0 %}
+      <div class="ticket-line">
+        <span>Vuelto</span>
+        <span>{{ venta.vuelto|gs }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </section>
 
-      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
-        <h3>Pagos</h3>
-        {% for pago in venta.pagos.all %}
-          <div class="msg">{{ pago.get_metodo_pago_display }}: <b>{{ pago.monto|gs }}</b></div>
-        {% empty %}
-          <p class="muted">Sin pagos registrados.</p>
-        {% endfor %}
-      </div>
-
-      <div class="row" style="margin-top:14px">
-        <a class="btn" href="{% url 'ventas:pos' %}">Volver al POS</a>
-        <button class="btn primary" type="button" onclick="window.print()">Imprimir</button>
-      </div>
-    </section>
+  <div class="row ticket-actions" style="margin-top:14px">
+    <a class="btn" href="{% url 'ventas:pos' %}">Volver al POS</a>
+    <button class="btn primary" type="button" onclick="window.print()">Imprimir</button>
   </div>
+</div>
 {% endblock %}

@@ -166,6 +166,53 @@
               {% endfor %}
             </select>
           </div>
+          <div class="field" style="margin-bottom:10px;">
+  <label for="id_cliente_id">Cliente existente</label>
+  <select name="cliente_id" id="id_cliente_id">
+    <option value="">Consumidor final</option>
+    {% for cliente in clientes %}
+      <option value="{{ cliente.id }}">
+        {{ cliente.nombre_completo }} - {{ cliente.documento }}
+      </option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="card" style="margin-top:12px;background:rgba(15,23,42,.55)">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <p class="payment-label" style="margin:0">Alta rápida de cliente</p>
+    <button type="button" class="btn" id="btn-toggle-cliente">Nuevo cliente</button>
+  </div>
+
+  <input type="hidden" name="cliente_nuevo" id="id_cliente_nuevo" value="0">
+
+  <div id="panel-cliente-nuevo" style="display:none; margin-top:12px;">
+    <div class="field" style="margin-bottom:10px;">
+      <label for="id_cliente_nombre">Nombre</label>
+      <input type="text" name="cliente_nombre" id="id_cliente_nombre">
+    </div>
+
+    <div class="field" style="margin-bottom:10px;">
+      <label for="id_cliente_apellido">Apellido</label>
+      <input type="text" name="cliente_apellido" id="id_cliente_apellido">
+    </div>
+
+    <div class="field" style="margin-bottom:10px;">
+      <label for="id_cliente_documento">Documento</label>
+      <input type="text" name="cliente_documento" id="id_cliente_documento">
+    </div>
+
+    <div class="field" style="margin-bottom:10px;">
+      <label for="id_cliente_telefono">Teléfono</label>
+      <input type="text" name="cliente_telefono" id="id_cliente_telefono">
+    </div>
+
+    <div class="field" style="margin-bottom:10px;">
+      <label for="id_cliente_email">Email</label>
+      <input type="email" name="cliente_email" id="id_cliente_email">
+    </div>
+  </div>
+</div>
           <div class="payment-block">
             <p class="payment-label">Pago mixto</p>
 
@@ -296,5 +343,27 @@
 
     actualizarPago();
   });
+  const btnToggleCliente = document.getElementById("btn-toggle-cliente");
+const panelClienteNuevo = document.getElementById("panel-cliente-nuevo");
+const inputClienteNuevo = document.getElementById("id_cliente_nuevo");
+const selectCliente = document.getElementById("id_cliente_id");
+
+if (btnToggleCliente && panelClienteNuevo && inputClienteNuevo) {
+  btnToggleCliente.addEventListener("click", function () {
+    const visible = panelClienteNuevo.style.display !== "none";
+    if (visible) {
+      panelClienteNuevo.style.display = "none";
+      inputClienteNuevo.value = "0";
+      btnToggleCliente.textContent = "Nuevo cliente";
+    } else {
+      panelClienteNuevo.style.display = "block";
+      inputClienteNuevo.value = "1";
+      if (selectCliente) {
+        selectCliente.value = "";
+      }
+      btnToggleCliente.textContent = "Cancelar alta rápida";
+    }
+  });
+}
 </script>
 {% endblock %}

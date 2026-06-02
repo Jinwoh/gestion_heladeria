@@ -23,9 +23,10 @@ class VentaDetalleInline(admin.TabularInline):
 class VentaAdmin(admin.ModelAdmin):
     list_display = (
         "id",
+        "numero_ticket",
         "fecha",
         "usuario",
-        "caja_sesion",
+        "cliente",
         "total",
         "vuelto",
         "estado",
@@ -35,16 +36,21 @@ class VentaAdmin(admin.ModelAdmin):
         "estado",
         "fecha",
         "usuario",
-        "caja_sesion",
+        "cliente",
     )
     search_fields = (
         "id",
+        "numero_ticket",
         "usuario__username",
-        "caja_sesion__id",
+        "cliente__nombre",
+        "cliente__apellido",
+        "cliente__documento",
     )
     readonly_fields = (
+        "numero_ticket",
         "fecha",
         "usuario",
+        "cliente",
         "caja_sesion",
         "total",
         "vuelto",
@@ -73,7 +79,7 @@ class VentaAdmin(admin.ModelAdmin):
 class VentaPagoAdmin(admin.ModelAdmin):
     list_display = ("id", "venta", "metodo_pago", "monto")
     list_filter = ("metodo_pago",)
-    search_fields = ("venta__id",)
+    search_fields = ("venta__id", "venta__numero_ticket")
     readonly_fields = ("venta", "metodo_pago", "monto")
 
     def has_add_permission(self, request):
@@ -87,7 +93,7 @@ class VentaPagoAdmin(admin.ModelAdmin):
 class VentaDetalleAdmin(admin.ModelAdmin):
     list_display = ("id", "venta", "producto", "cantidad", "precio_unitario", "subtotal")
     list_filter = ("producto",)
-    search_fields = ("venta__id", "producto__nombre")
+    search_fields = ("venta__id", "venta__numero_ticket", "producto__nombre")
     readonly_fields = ("venta", "producto", "cantidad", "precio_unitario", "subtotal")
 
     def has_add_permission(self, request):

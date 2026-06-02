@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Max
 
 from apps.caja.models import CajaSesion
 from apps.productos.models import Producto
@@ -12,6 +13,12 @@ class Venta(models.Model):
     class Estado(models.TextChoices):
         CONFIRMADA = "CONFIRMADA", "Confirmada"
         ANULADA = "ANULADA", "Anulada"
+
+    numero_ticket = models.PositiveIntegerField(
+        unique=True,
+        blank=True,
+        null=True,
+    )
 
     caja_sesion = models.ForeignKey(
         CajaSesion,
@@ -45,8 +52,14 @@ class Venta(models.Model):
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
 
+    def save(self, *args, **kwargs):
+        if self.numero_ticket is None:
+            ultimo = Venta.objects.aggregate(ultimo=Max("numero_ticket"))["ultimo"] or 0
+            self.numero_ticket = ultimo + 1
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Venta #{self.id} - {self.total}"
+        return f"Ticket #{self.numero_ticket} - {self.total}"
 
     def monto_por_metodo(self, metodo_pago: str) -> Decimal:
         return sum(
