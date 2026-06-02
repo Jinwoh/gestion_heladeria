@@ -33,7 +33,7 @@
     --border-2:    rgba(255, 255, 255, 0.12);
  
     --radius-sm:  8px;
-    --radius:     14px;
+    --radius:     12px;
     --radius-lg:  20px;
     --radius-xl:  28px;
  
@@ -459,6 +459,7 @@ input[type="number"] { font-family: 'DM Mono', monospace; }
     color: var(--text);
     box-shadow: var(--shadow);
     overflow: hidden;
+    padding: 2px 2px 2px 8px;
     animation: slideInToast 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
  
@@ -648,7 +649,7 @@ tbody tr:hover { background: rgba(255,255,255,.025); }
         width: auto;
     }
  
-    .card { padding: 16px; border-radius: var(--radius); }
+    .card { border-radius: var(--radius); }
     .card h1 { font-size: 1.3rem; }
 }
 

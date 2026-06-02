@@ -10,8 +10,29 @@
 
         <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
           <h3>Información general</h3>
-          <div class="msg">Fecha: <b>{{ venta.fecha|date:"d/m/Y H:i" }}</b></div>
-          <div class="msg">Usuario: <b>{{ venta.usuario.username }}</b></div>
+          <div class="msg">Fecha: <b>{{ venta.fecha|date:"d/m/Y" }}</b></div>
+          <div class="msg">Hora: <b>{{ venta.fecha|date:"H:i" }}</b></div>
+          <div class="msg">Cajero: <b>{{ venta.usuario.username }}</b></div>
+          <div class="msg">
+            Caja:
+            <b>
+              {% if venta.caja_sesion.caja %}
+                {{ venta.caja_sesion.caja.numero }}
+              {% else %}
+                #{{ venta.caja_sesion.id }}
+              {% endif %}
+            </b>
+          </div>
+          <div class="msg">
+            Cliente:
+            <b>
+              {% if venta.cliente %}
+                {{ venta.cliente.nombre_completo }}
+              {% else %}
+                Consumidor final
+              {% endif %}
+            </b>
+          </div>
           <div class="msg">Estado: <b>{{ venta.get_estado_display }}</b></div>
           <div class="msg">Total: <b>{{ venta.total|gs }}</b></div>
           {% if venta.numero_ticket %}
@@ -93,8 +114,8 @@
       {% endif %}
 
       <div class="row" style="margin-top:14px">
-        <a class="btn" href="{% url 'reportes:reporte_general' %}">Volver al reporte general</a>
-        <a class="btn warn" href="{% url 'reportes:reporte_dia' %}">Reporte del día</a>
+        <a class="btn" href="{% url 'reportes:reporte_tickets' %}">Volver a tickets</a>
+        <a class="btn warn" href="{% url 'reportes:reporte_general' %}">Reporte general</a>
       </div>
     </section>
   </div>

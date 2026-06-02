@@ -250,6 +250,66 @@ def reporte_general(request):
 
 @login_required
 @permission_required("ventas.view_venta", raise_exception=True)
+def reporte_tickets(request):
+    hoy = timezone.localdate()
+
+    fecha_desde = _parse_date(request.GET.get("fecha_desde")) or hoy
+    fecha_hasta = _parse_date(request.GET.get("fecha_hasta")) or hoy
+    numero_ticket = request.GET.get("numero_ticket", "").strip()
+    usuario_id = request.GET.get("usuario", "").strip()
+
+    if fecha_desde > fecha_hasta:
+        messages.error(request, "La fecha desde no puede ser mayor que la fecha hasta.")
+        fecha_desde = fecha_hasta
+
+    puede_ver_global = _puede_ver_reportes_global(request.user)
+    usuario_filtro = None
+    usuarios = User.objects.filter(is_active=True).order_by("username")
+
+    if puede_ver_global:
+        if usuario_id:
+            try:
+                usuario_filtro = User.objects.get(pk=int(usuario_id))
+            except (ValueError, User.DoesNotExist):
+                usuario_filtro = None
+    else:
+        usuario_filtro = request.user
+
+    tickets = (
+        ventas_qs(
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            usuario=usuario_filtro,
+            metodo_pago=None,
+        )
+        .select_related("usuario", "caja_sesion", "caja_sesion__caja", "cliente")
+        .prefetch_related("detalles", "detalles__producto", "pagos")
+        .order_by("-fecha")
+    )
+
+    if numero_ticket:
+        try:
+            tickets = tickets.filter(numero_ticket=int(numero_ticket))
+        except ValueError:
+            tickets = tickets.none()
+            messages.error(request, "Número de ticket inválido.")
+
+    tickets = tickets[:200]
+
+    ctx = {
+        "tickets": tickets,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "numero_ticket": numero_ticket,
+        "usuario_id": usuario_id,
+        "usuarios": usuarios,
+        "puede_ver_global": puede_ver_global,
+    }
+    return render(request, "reportes/tickets.html", ctx)
+
+
+@login_required
+@permission_required("ventas.view_venta", raise_exception=True)
 def detalle_venta(request, venta_id):
     puede_ver_global = _puede_ver_reportes_global(request.user)
 

@@ -117,10 +117,12 @@
               </span>
               <span class="caret">▼</span>
             </button>
+            
 
             <div class="dropdown-menu">
               <a href="{% url 'reportes:reporte_dia' %}" class="dropdown-item">Reporte día</a>
               <a href="{% url 'reportes:reporte_general' %}" class="dropdown-item">Reporte general</a>
+              <a href="{% url 'reportes:reporte_tickets' %}" class="dropdown-item">Tickets emitidos</a>
             </div>
           </div>
           {% endif %}

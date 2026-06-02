@@ -1,5 +1,5 @@
 from decimal import Decimal, InvalidOperation
-
+from django.views.decorators.cache import never_cache
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
@@ -48,6 +48,7 @@ def _get_stock_disponible(producto_id, stock_map):
 
 
 @login_required
+@never_cache
 @permission_required("ventas.add_venta", raise_exception=True)
 def pos_view(request):
     caja = get_caja_abierta(request.user)
@@ -388,6 +389,7 @@ def lista_productos(request):
 
 
 @login_required
+@never_cache
 @permission_required("ventas.view_venta", raise_exception=True)
 def ticket_venta(request, venta_id):
     venta = get_object_or_404(
