@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import render
 
 from .models import Cliente
@@ -15,11 +16,9 @@ def lista_clientes(request):
 
     if q:
         clientes_qs = clientes_qs.filter(
-            nombre__icontains=q
-        ) | clientes_qs.filter(
-            apellido__icontains=q
-        ) | clientes_qs.filter(
-            documento__icontains=q
+            Q(nombre__icontains=q)
+            | Q(apellido__icontains=q)
+            | Q(documento__icontains=q)
         )
 
     if estado == "activos":

@@ -9,12 +9,18 @@ def get_or_create_stock(producto: Producto) -> Stock:
     return stock
 
 
+def _get_stock_bloqueado(producto: Producto) -> Stock:
+    """Obtiene y bloquea el stock para evitar actualizaciones perdidas."""
+    get_or_create_stock(producto)
+    return Stock.objects.select_for_update().get(producto=producto)
+
+
 @transaction.atomic
 def sumar_stock(*, producto: Producto, cantidad: int, usuario, motivo: str = "") -> Stock:
     if cantidad <= 0:
         raise ValidationError("La cantidad debe ser mayor a 0.")
 
-    stock = get_or_create_stock(producto)
+    stock = _get_stock_bloqueado(producto)
     stock.cantidad += cantidad
     stock.save(update_fields=["cantidad", "actualizado_en"])
 
@@ -33,7 +39,7 @@ def restar_stock(*, producto: Producto, cantidad: int, usuario, motivo: str = ""
     if cantidad <= 0:
         raise ValidationError("La cantidad debe ser mayor a 0.")
 
-    stock = get_or_create_stock(producto)
+    stock = _get_stock_bloqueado(producto)
     if stock.cantidad < cantidad:
         raise ValidationError(f"Stock insuficiente. Disponible: {stock.cantidad}")
 
@@ -55,7 +61,7 @@ def ajustar_stock(*, producto: Producto, nueva_cantidad: int, usuario, motivo: s
     if nueva_cantidad < 0:
         raise ValidationError("La cantidad no puede ser negativa.")
 
-    stock = get_or_create_stock(producto)
+    stock = _get_stock_bloqueado(producto)
     diferencia = nueva_cantidad - stock.cantidad
 
     stock.cantidad = nueva_cantidad

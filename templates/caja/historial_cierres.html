@@ -69,6 +69,14 @@
         <p class="muted" style="margin-top:14px">No hay cierres registrados.</p>
       {% endif %}
 
+      {% if page_obj.has_other_pages %}
+      <div class="row" style="margin-top:16px">
+        {% if page_obj.has_previous %}<a class="btn" href="?page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}
+        <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a class="btn" href="?page={{ page_obj.next_page_number }}">Siguiente</a>{% endif %}
+      </div>
+      {% endif %}
+
       <div class="row" style="margin-top:16px">
         <a class="btn" href="{% url 'caja:apertura' %}">Volver</a>
       </div>

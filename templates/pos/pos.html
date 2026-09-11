@@ -156,17 +156,6 @@
           {% csrf_token %}
           <input type="hidden" name="action" value="confirm">
           <div class="field" style="margin-bottom:10px;">
-            <label for="id_cliente_id">Cliente (opcional)</label>
-            <select name="cliente_id" id="id_cliente_id">
-              <option value="">Consumidor final</option>
-              {% for cliente in clientes %}
-                <option value="{{ cliente.id }}">
-                  {{ cliente.nombre_completo }} - {{ cliente.documento }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="field" style="margin-bottom:10px;">
   <label for="id_cliente_id">Cliente existente</label>
   <select name="cliente_id" id="id_cliente_id">
     <option value="">Consumidor final</option>

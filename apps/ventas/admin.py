@@ -6,8 +6,8 @@ from .models import Venta, VentaPago, VentaDetalle
 class VentaPagoInline(admin.TabularInline):
     model = VentaPago
     extra = 0
-    fields = ("metodo_pago", "monto")
-    readonly_fields = ("metodo_pago", "monto")
+    fields = ("metodo_pago", "monto", "monto_recibido")
+    readonly_fields = ("metodo_pago", "monto", "monto_recibido")
     can_delete = False
 
 
@@ -30,6 +30,9 @@ class VentaAdmin(admin.ModelAdmin):
         "total",
         "vuelto",
         "estado",
+        "anulada_en",
+        "anulada_por",
+        "motivo_anulacion",
         "resumen_pagos",
     )
     list_filter = (
@@ -77,10 +80,10 @@ class VentaAdmin(admin.ModelAdmin):
 
 @admin.register(VentaPago)
 class VentaPagoAdmin(admin.ModelAdmin):
-    list_display = ("id", "venta", "metodo_pago", "monto")
+    list_display = ("id", "venta", "metodo_pago", "monto", "monto_recibido")
     list_filter = ("metodo_pago",)
     search_fields = ("venta__id", "venta__numero_ticket")
-    readonly_fields = ("venta", "metodo_pago", "monto")
+    readonly_fields = ("venta", "metodo_pago", "monto", "monto_recibido")
 
     def has_add_permission(self, request):
         return False

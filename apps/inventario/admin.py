@@ -7,6 +7,13 @@ class StockAdmin(admin.ModelAdmin):
     list_display = ("producto", "cantidad", "actualizado_en")
     search_fields = ("producto__nombre",)
     list_select_related = ("producto",)
+    readonly_fields = ("producto", "cantidad", "actualizado_en")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(MovimientoStock)
@@ -16,3 +23,10 @@ class MovimientoStockAdmin(admin.ModelAdmin):
     search_fields = ("producto__nombre", "motivo", "usuario__username")
     list_select_related = ("producto", "usuario")
     date_hierarchy = "creado_en"
+    readonly_fields = ("producto", "tipo", "cantidad", "motivo", "usuario", "creado_en")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

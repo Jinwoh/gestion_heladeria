@@ -58,7 +58,7 @@
                         {{ pago.get_metodo_pago_display }}
                       </td>
                       <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
-                        {{ pago.monto|gs }}
+                        {{ pago.monto|gs }}{% if pago.monto_recibido != pago.monto %} (recibido {{ pago.monto_recibido|gs }}){% endif %}
                       </td>
                     </tr>
                   {% endfor %}
@@ -117,6 +117,19 @@
         <a class="btn" href="{% url 'reportes:reporte_tickets' %}">Volver a tickets</a>
         <a class="btn warn" href="{% url 'reportes:reporte_general' %}">Reporte general</a>
       </div>
+
+      {% if venta.estado == "CONFIRMADA" and perms.ventas.cancel_venta %}
+      <form method="post" action="{% url 'ventas:anular' venta.id %}" style="margin-top:18px" onsubmit="return confirm('¿Confirmás la anulación? Esta acción registrará contramovimientos.');">
+        {% csrf_token %}
+        <div class="field">
+          <label for="id_motivo">Motivo de anulación</label>
+          <input id="id_motivo" name="motivo" maxlength="255" required>
+        </div>
+        <button class="btn danger" type="submit">Anular venta</button>
+      </form>
+      {% elif venta.estado == "ANULADA" %}
+        <p class="msg warning">Anulada: {{ venta.motivo_anulacion }} · {{ venta.anulada_en|date:"d/m/Y H:i" }}</p>
+      {% endif %}
     </section>
   </div>
 {% endblock %}

@@ -37,7 +37,7 @@ def _parse_date(value):
 
 
 def _puede_ver_reportes_global(user):
-    return user.is_superuser or user.has_perm("ventas.view_venta")
+    return user.is_superuser or user.has_perm("ventas.view_global_reports")
 
 
 def _puede_ver_cierres(user):
@@ -117,7 +117,11 @@ def reporte_general(request):
     puede_ver_cierres = _puede_ver_cierres(request.user)
 
     usuario_filtro = None
-    usuarios = User.objects.filter(is_active=True).order_by("username")
+    usuarios = (
+        User.objects.filter(is_active=True).order_by("username")
+        if puede_ver_global
+        else User.objects.filter(pk=request.user.pk)
+    )
 
     if puede_ver_global:
         if usuario_id:
@@ -317,7 +321,6 @@ def detalle_venta(request, venta_id):
         Venta.objects.select_related("usuario", "caja_sesion", "cliente")
         .prefetch_related("detalles", "detalles__producto", "pagos"),
         pk=venta_id,
-        estado=Venta.Estado.CONFIRMADA,
     )
 
     if not puede_ver_global and venta.usuario != request.user:

@@ -188,7 +188,7 @@
       {% for pago in venta.pagos.all %}
         <div class="ticket-line">
           <span>{{ pago.get_metodo_pago_display }}</span>
-          <span>{{ pago.monto|gs }}</span>
+          <span>{{ pago.monto|gs }}{% if pago.monto_recibido != pago.monto %} (recibido {{ pago.monto_recibido|gs }}){% endif %}</span>
         </div>
       {% empty %}
         <div>Sin pagos registrados</div>
@@ -214,6 +214,9 @@
         <span>{{ venta.vuelto|gs }}</span>
       </div>
       {% endif %}
+      <div class="ticket-center" style="margin-top:10px;font-size:.75rem">
+        Documento interno. No sustituye un comprobante fiscal autorizado.
+      </div>
     </div>
   </section>
 
@@ -222,6 +225,7 @@
     <button class="btn primary" type="button" onclick="window.print()">Imprimir</button>
   </div>
 </div>
+<<<<<<< Updated upstream
 <script>
   window.addEventListener("pageshow", function (event) {
     if (event.persisted) {
@@ -230,3 +234,6 @@
   });
 </script>
 {% endblock %}
+=======
+{% endblock %}
+>>>>>>> Stashed changes

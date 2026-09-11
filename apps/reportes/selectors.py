@@ -1,13 +1,18 @@
 from decimal import Decimal
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
-from django.db.models import Sum, Count, Exists, OuterRef, Q
+from django.db.models import DecimalField, Sum, Count, Exists, OuterRef, Subquery
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from apps.ventas.models import Venta, VentaDetalle, VentaPago
 from apps.productos.models import Producto
 from apps.caja.models import CajaSesion, MovimientoCaja
+
+
+def _inicio_dia(fecha):
+    valor = datetime.combine(fecha, time.min)
+    return timezone.make_aware(valor, timezone.get_current_timezone())
 
 
 def ventas_qs(*, fecha_desde=None, fecha_hasta=None, usuario=None, metodo_pago=None):
@@ -18,10 +23,10 @@ def ventas_qs(*, fecha_desde=None, fecha_hasta=None, usuario=None, metodo_pago=N
     )
 
     if fecha_desde:
-        qs = qs.filter(fecha__date__gte=fecha_desde)
+        qs = qs.filter(fecha__gte=_inicio_dia(fecha_desde))
 
     if fecha_hasta:
-        qs = qs.filter(fecha__date__lte=fecha_hasta)
+        qs = qs.filter(fecha__lt=_inicio_dia(fecha_hasta + timedelta(days=1)))
 
     if usuario is not None:
         qs = qs.filter(usuario=usuario)
@@ -88,10 +93,10 @@ def ventas_por_metodo_pago(*, fecha_desde=None, fecha_hasta=None, usuario=None):
     )
 
     if fecha_desde:
-        pagos = pagos.filter(venta__fecha__date__gte=fecha_desde)
+        pagos = pagos.filter(venta__fecha__gte=_inicio_dia(fecha_desde))
 
     if fecha_hasta:
-        pagos = pagos.filter(venta__fecha__date__lte=fecha_hasta)
+        pagos = pagos.filter(venta__fecha__lt=_inicio_dia(fecha_hasta + timedelta(days=1)))
 
     if usuario is not None:
         pagos = pagos.filter(venta__usuario=usuario)
@@ -139,10 +144,10 @@ def top_productos_vendidos(*, fecha_desde=None, fecha_hasta=None, usuario=None, 
     ).select_related("producto", "venta")
 
     if fecha_desde:
-        detalles = detalles.filter(venta__fecha__date__gte=fecha_desde)
+        detalles = detalles.filter(venta__fecha__gte=_inicio_dia(fecha_desde))
 
     if fecha_hasta:
-        detalles = detalles.filter(venta__fecha__date__lte=fecha_hasta)
+        detalles = detalles.filter(venta__fecha__lt=_inicio_dia(fecha_hasta + timedelta(days=1)))
 
     if usuario is not None:
         detalles = detalles.filter(venta__usuario=usuario)
@@ -162,10 +167,10 @@ def ventas_por_producto(*, fecha_desde=None, fecha_hasta=None, usuario=None):
     ).select_related("producto", "venta")
 
     if fecha_desde:
-        detalles = detalles.filter(venta__fecha__date__gte=fecha_desde)
+        detalles = detalles.filter(venta__fecha__gte=_inicio_dia(fecha_desde))
 
     if fecha_hasta:
-        detalles = detalles.filter(venta__fecha__date__lte=fecha_hasta)
+        detalles = detalles.filter(venta__fecha__lt=_inicio_dia(fecha_hasta + timedelta(days=1)))
 
     if usuario is not None:
         detalles = detalles.filter(venta__usuario=usuario)
@@ -186,10 +191,10 @@ def productos_sin_ventas(*, fecha_desde=None, fecha_hasta=None, usuario=None, so
     )
 
     if fecha_desde:
-        ventas_subquery = ventas_subquery.filter(venta__fecha__date__gte=fecha_desde)
+        ventas_subquery = ventas_subquery.filter(venta__fecha__gte=_inicio_dia(fecha_desde))
 
     if fecha_hasta:
-        ventas_subquery = ventas_subquery.filter(venta__fecha__date__lte=fecha_hasta)
+        ventas_subquery = ventas_subquery.filter(venta__fecha__lt=_inicio_dia(fecha_hasta + timedelta(days=1)))
 
     if usuario is not None:
         ventas_subquery = ventas_subquery.filter(venta__usuario=usuario)
@@ -214,10 +219,10 @@ def productos_baja_rotacion(*, fecha_desde=None, fecha_hasta=None, usuario=None,
     )
 
     if fecha_desde:
-        detalles = detalles.filter(venta__fecha__date__gte=fecha_desde)
+        detalles = detalles.filter(venta__fecha__gte=_inicio_dia(fecha_desde))
 
     if fecha_hasta:
-        detalles = detalles.filter(venta__fecha__date__lte=fecha_hasta)
+        detalles = detalles.filter(venta__fecha__lt=_inicio_dia(fecha_hasta + timedelta(days=1)))
 
     if usuario is not None:
         detalles = detalles.filter(venta__usuario=usuario)
@@ -282,28 +287,56 @@ def comparativa_periodo(*, fecha_desde, fecha_hasta, usuario=None, metodo_pago=N
 
 
 def cierres_caja_qs(*, fecha_desde=None, fecha_hasta=None, usuario=None):
-    qs = CajaSesion.objects.select_related("usuario")
+    qs = CajaSesion.objects.select_related("usuario", "caja").filter(
+        estado=CajaSesion.Estado.CERRADA
+    )
 
     if fecha_desde:
-        qs = qs.filter(fecha_apertura__date__gte=fecha_desde)
+        qs = qs.filter(fecha_apertura__gte=_inicio_dia(fecha_desde))
 
     if fecha_hasta:
-        qs = qs.filter(fecha_apertura__date__lte=fecha_hasta)
+        qs = qs.filter(fecha_apertura__lt=_inicio_dia(fecha_hasta + timedelta(days=1)))
 
     if usuario is not None:
         qs = qs.filter(usuario=usuario)
 
+    importe = DecimalField(max_digits=12, decimal_places=2)
+    ventas = (
+        Venta.objects.filter(caja_sesion_id=OuterRef("pk"), estado=Venta.Estado.CONFIRMADA)
+        .values("caja_sesion_id")
+        .annotate(total=Sum("total"))
+        .values("total")
+    )
+    ingresos = (
+        MovimientoCaja.objects.filter(
+            caja_sesion_id=OuterRef("pk"),
+            tipo__in=[MovimientoCaja.Tipo.INGRESO, MovimientoCaja.Tipo.AJUSTE_INGRESO],
+        )
+        .values("caja_sesion_id")
+        .annotate(total=Sum("monto"))
+        .values("total")
+    )
+    egresos = (
+        MovimientoCaja.objects.filter(
+            caja_sesion_id=OuterRef("pk"),
+            tipo__in=[MovimientoCaja.Tipo.EGRESO, MovimientoCaja.Tipo.AJUSTE_EGRESO],
+        )
+        .values("caja_sesion_id")
+        .annotate(total=Sum("monto"))
+        .values("total")
+    )
+
     return qs.annotate(
         total_ventas=Coalesce(
-            Sum("ventas__total", filter=Q(ventas__estado=Venta.Estado.CONFIRMADA)),
+            Subquery(ventas, output_field=importe),
             Decimal("0"),
         ),
         total_ingresos=Coalesce(
-            Sum("movimientos__monto", filter=Q(movimientos__tipo=MovimientoCaja.Tipo.INGRESO)),
+            Subquery(ingresos, output_field=importe),
             Decimal("0"),
         ),
         total_egresos=Coalesce(
-            Sum("movimientos__monto", filter=Q(movimientos__tipo=MovimientoCaja.Tipo.EGRESO)),
+            Subquery(egresos, output_field=importe),
             Decimal("0"),
         ),
     ).order_by("-fecha_apertura")

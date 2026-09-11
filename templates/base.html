@@ -90,6 +90,20 @@
               {% if perms.caja.view_cajasesion %}
                 <a href="{% url 'caja:historial_cierres' %}" class="dropdown-item">Historial de cierres</a>
               {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if perms.inventario.view_stock or perms.clientes.view_cliente %}
+          <div class="nav-group">
+            <button type="button" class="nav-toggle">
+              <span class="nav-toggle-content"><span>Gestión</span></span>
+              <span class="caret">▼</span>
+            </button>
+            <div class="dropdown-menu">
+              {% if perms.inventario.view_stock %}
+                <a href="{% url 'inventario:stock' %}" class="dropdown-item">Inventario</a>
+              {% endif %}
               {% if perms.clientes.view_cliente %}
                 <a href="{% url 'clientes:lista' %}" class="dropdown-item">Clientes</a>
               {% endif %}

@@ -10,33 +10,44 @@
       </p>
 
       <div class="grid" style="margin-top:16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
-        <div class="card" style="background:rgba(15,23,42,.55)">
+        {% if perms.ventas.add_venta or perms.productos.view_producto %}<div class="card" style="background:rgba(15,23,42,.55)">
           <h3>Ventas</h3>
           <p class="muted">Gestioná el punto de venta y el catálogo visible.</p>
           <div class="row">
-            <a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>
-            <a class="btn warn" href="{% url 'ventas:productos' %}">Productos</a>
+            {% if perms.ventas.add_venta %}<a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>{% endif %}
+            {% if perms.productos.view_producto %}<a class="btn warn" href="{% url 'ventas:productos' %}">Productos</a>{% endif %}
           </div>
-        </div>
+        </div>{% endif %}
 
-        <div class="card" style="background:rgba(15,23,42,.55)">
+        {% if perms.caja.view_cajasesion or perms.caja.add_cajasesion or perms.caja.change_cajasesion %}<div class="card" style="background:rgba(15,23,42,.55)">
           <h3>Caja</h3>
           <p class="muted">Apertura, arqueo y cierre de caja.</p>
           <div class="row">
-            <a class="btn" href="{% url 'caja:apertura' %}">Apertura</a>
-            <a class="btn" href="{% url 'caja:arqueo' %}">Arqueo</a>
-            <a class="btn danger" href="{% url 'caja:cierre' %}">Cierre</a>
+            {% if perms.caja.add_cajasesion %}<a class="btn" href="{% url 'caja:apertura' %}">Apertura</a>{% endif %}
+            {% if perms.caja.view_cajasesion %}<a class="btn" href="{% url 'caja:arqueo' %}">Arqueo</a>{% endif %}
+            {% if perms.caja.change_cajasesion %}<a class="btn danger" href="{% url 'caja:cierre' %}">Cierre</a>{% endif %}
           </div>
-        </div>
+        </div>{% endif %}
 
-        <div class="card" style="background:rgba(15,23,42,.55)">
+        {% if perms.ventas.view_venta %}<div class="card" style="background:rgba(15,23,42,.55)">
           <h3>Reportes</h3>
           <p class="muted">Consultá el resumen diario y los reportes generales.</p>
           <div class="row">
             <a class="btn" href="{% url 'reportes:reporte_dia' %}">Reporte día</a>
             <a class="btn warn" href="{% url 'reportes:reporte_general' %}">Reporte general</a>
           </div>
+        </div>{% endif %}
+
+        {% if perms.inventario.view_stock or perms.clientes.view_cliente %}
+        <div class="card" style="background:rgba(15,23,42,.55)">
+          <h3>Gestión</h3>
+          <p class="muted">Consultá existencias y clientes.</p>
+          <div class="row">
+            {% if perms.inventario.view_stock %}<a class="btn" href="{% url 'inventario:stock' %}">Inventario</a>{% endif %}
+            {% if perms.clientes.view_cliente %}<a class="btn" href="{% url 'clientes:lista' %}">Clientes</a>{% endif %}
+          </div>
         </div>
+        {% endif %}
 
         {% if request.user.is_staff %}
         <div class="card" style="background:rgba(15,23,42,.55)">

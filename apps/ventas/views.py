@@ -1,6 +1,12 @@
 from decimal import Decimal, InvalidOperation
+<<<<<<< Updated upstream
 from django.views.decorators.cache import never_cache
+=======
+import logging
+
+>>>>>>> Stashed changes
 from django.contrib import messages
+from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -12,7 +18,10 @@ from apps.productos.models import Producto
 from apps.clientes.models import Cliente
 
 from .models import Venta
-from .services import crear_venta
+from .services import anular_venta, crear_venta
+
+
+logger = logging.getLogger(__name__)
 
 
 CART_SESSION_KEY = "pos_carrito"
@@ -217,6 +226,7 @@ def pos_view(request):
                 return redirect("ventas:pos")
 
             cliente = None
+            cliente_data = None
             cliente_nuevo = request.POST.get("cliente_nuevo", "").strip()
 
             if cliente_nuevo == "1":
@@ -230,18 +240,14 @@ def pos_view(request):
                     messages.error(request, "Para alta rápida, nombre y documento son obligatorios.")
                     return redirect("ventas:pos")
 
-                if Cliente.objects.filter(documento=documento).exists():
-                    messages.error(request, "Ya existe un cliente con ese documento.")
-                    return redirect("ventas:pos")
-
-                cliente = Cliente.objects.create(
-                    nombre=nombre,
-                    apellido=apellido,
-                    documento=documento,
-                    telefono=telefono,
-                    email=email,
-                    activo=True,
-                )
+                cliente_data = {
+                    "nombre": nombre,
+                    "apellido": apellido,
+                    "documento": documento,
+                    "telefono": telefono,
+                    "email": email,
+                    "activo": True,
+                }
             else:
                 cliente_id = request.POST.get("cliente_id", "").strip()
                 if cliente_id:
@@ -273,6 +279,7 @@ def pos_view(request):
                     items=items,
                     pagos=pagos,
                     cliente=cliente,
+                    cliente_data=cliente_data,
                 )
                 _clear_cart(request.session)
 
@@ -285,9 +292,10 @@ def pos_view(request):
                 messages.success(request, msg)
                 return redirect("ventas:ticket", venta_id=venta.id)
             except ValidationError as e:
-                messages.error(request, e.message)
-            except Exception as e:
-                messages.error(request, f"Error al crear venta: {str(e)}")
+                messages.error(request, "; ".join(e.messages))
+            except Exception:
+                logger.exception("Error inesperado al crear una venta")
+                messages.error(request, "No se pudo crear la venta. Intentá nuevamente.")
 
     cart = _get_cart(request.session)
 
@@ -399,16 +407,40 @@ def ticket_venta(request, venta_id):
         estado=Venta.Estado.CONFIRMADA,
     )
 
+    if not request.user.has_perm("ventas.view_global_reports") and venta.usuario_id != request.user.id:
+        messages.error(request, "No tenés permisos para ver ese ticket.")
+        return redirect("ventas:pos")
+
     total = venta.total
-    iva_10 = total / Decimal("11")
+    iva_10 = (total / Decimal("11")).quantize(Decimal("0.01"))
     total_gravado = total - iva_10
 
     ctx = {
         "venta": venta,
-        "comercio_nombre": "Heladería Atenas",
-        "comercio_direccion": "Asunción, sobre Eusebio Ayala y Kubicheck",
-        "comercio_ruc": "5099245-0",
+        "comercio_nombre": settings.COMERCIO_NOMBRE,
+        "comercio_direccion": settings.COMERCIO_DIRECCION,
+        "comercio_ruc": settings.COMERCIO_RUC,
         "iva_10": iva_10,
         "total_gravado": total_gravado,
     }
     return render(request, "ventas/ticket.html", ctx)
+
+
+@login_required
+@permission_required("ventas.cancel_venta", raise_exception=True)
+def anular_venta_view(request, venta_id):
+    if request.method != "POST":
+        messages.error(request, "Método no permitido para anular una venta.")
+        return redirect("reportes:detalle_venta", venta_id=venta_id)
+
+    venta = get_object_or_404(Venta, pk=venta_id)
+    try:
+        anular_venta(
+            venta=venta,
+            usuario=request.user,
+            motivo=request.POST.get("motivo", ""),
+        )
+        messages.success(request, f"La venta #{venta.numero_ticket:08d} fue anulada.")
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    return redirect("reportes:detalle_venta", venta_id=venta_id)

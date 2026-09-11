@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 
 class Caja(models.Model):
@@ -57,6 +58,47 @@ class CajaSesion(models.Model):
         ordering = ["-fecha_apertura"]
         verbose_name = "Caja (Sesión)"
         verbose_name_plural = "Cajas (Sesiones)"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["caja"],
+                condition=Q(estado="ABIERTA"),
+                name="uq_caja_una_sesion_abierta",
+            ),
+            models.UniqueConstraint(
+                fields=["usuario"],
+                condition=Q(estado="ABIERTA"),
+                name="uq_usuario_una_caja_abierta",
+            ),
+            models.CheckConstraint(
+                condition=Q(monto_apertura__gte=0),
+                name="ck_caja_monto_apertura_no_negativo",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(monto_cierre_declarado__isnull=True)
+                    | Q(monto_cierre_declarado__gte=0)
+                ),
+                name="ck_caja_monto_cierre_no_negativo",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        estado="ABIERTA",
+                        fecha_cierre__isnull=True,
+                        monto_cierre_declarado__isnull=True,
+                    )
+                    | Q(
+                        estado="CERRADA",
+                        fecha_cierre__isnull=False,
+                        monto_cierre_declarado__isnull=False,
+                    )
+                ),
+                name="ck_caja_estado_cierre_consistente",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["estado", "fecha_apertura"], name="idx_caja_estado_fecha"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.caja} - {self.usuario} - {self.estado}"
@@ -65,9 +107,11 @@ class CajaSesion(models.Model):
 class MovimientoCaja(models.Model):
     class Tipo(models.TextChoices):
         VENTA = "VENTA", "Venta"
+        ANULACION = "ANULACION", "Anulación de venta"
         INGRESO = "INGRESO", "Ingreso"
         EGRESO = "EGRESO", "Egreso"
-        AJUSTE = "AJUSTE", "Ajuste"
+        AJUSTE_INGRESO = "AJUSTE_IN", "Ajuste positivo"
+        AJUSTE_EGRESO = "AJUSTE_OUT", "Ajuste negativo"
 
     class MetodoPago(models.TextChoices):
         EFECTIVO = "efectivo", "Efectivo"
@@ -101,6 +145,22 @@ class MovimientoCaja(models.Model):
         ordering = ["-creado_en"]
         verbose_name = "Movimiento de Caja"
         verbose_name_plural = "Movimientos de Caja"
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(monto__gt=0),
+                name="ck_mov_caja_monto_positivo",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(tipo__in=["VENTA", "ANULACION"], metodo_pago__isnull=False)
+                    | Q(
+                        tipo__in=["INGRESO", "EGRESO", "AJUSTE_IN", "AJUSTE_OUT"],
+                        metodo_pago__isnull=True,
+                    )
+                ),
+                name="ck_mov_caja_metodo_consistente",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.tipo} {self.monto} ({self.caja_sesion.caja})"

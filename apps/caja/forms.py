@@ -56,7 +56,8 @@ class MovimientoCajaForm(forms.Form):
         choices=[
             (MovimientoCaja.Tipo.INGRESO, "Ingreso"),
             (MovimientoCaja.Tipo.EGRESO, "Egreso"),
-            (MovimientoCaja.Tipo.AJUSTE, "Ajuste"),
+            (MovimientoCaja.Tipo.AJUSTE_INGRESO, "Ajuste positivo"),
+            (MovimientoCaja.Tipo.AJUSTE_EGRESO, "Ajuste negativo"),
         ],
         required=True,
         label="Tipo de movimiento",

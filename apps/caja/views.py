@@ -3,10 +3,10 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
+from django.core.paginator import Paginator
 from django.shortcuts import redirect, render
 
-from apps.caja.models import CajaSesion, MovimientoCaja
+from apps.caja.models import CajaSesion
 
 from .forms import AperturaCajaForm, CierreCajaForm, MovimientoCajaForm
 from .services import (
@@ -14,6 +14,7 @@ from .services import (
     cerrar_caja,
     get_caja_abierta,
     registrar_movimiento,
+    resumen_caja,
 )
 
 
@@ -34,8 +35,8 @@ def apertura_caja(request):
                 )
                 messages.success(request, "Caja abierta correctamente.")
                 return redirect("caja:arqueo")
-            except ValidationError as e:
-                messages.error(request, e.message)
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
         else:
             messages.error(request, "Formulario inválido. Revisá los campos.")
     else:
@@ -67,45 +68,14 @@ def arqueo_caja(request):
         return redirect("caja:apertura")
 
     movs = caja.movimientos.all()
-
-    total_ingresos = movs.filter(
-        tipo=MovimientoCaja.Tipo.INGRESO
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    total_egresos = movs.filter(
-        tipo=MovimientoCaja.Tipo.EGRESO
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    ventas_efectivo = movs.filter(
-        tipo=MovimientoCaja.Tipo.VENTA,
-        metodo_pago=MovimientoCaja.MetodoPago.EFECTIVO,
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    ventas_tarjeta = movs.filter(
-        tipo=MovimientoCaja.Tipo.VENTA,
-        metodo_pago=MovimientoCaja.MetodoPago.TARJETA,
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    ventas_qr = movs.filter(
-        tipo=MovimientoCaja.Tipo.VENTA,
-        metodo_pago=MovimientoCaja.MetodoPago.QR,
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    total_ventas = ventas_efectivo + ventas_tarjeta + ventas_qr
-    esperado = total_ingresos + ventas_efectivo - total_egresos
+    resumen = resumen_caja(caja)
 
     return render(
         request,
         "caja/arqueo.html",
         {
             "caja": caja,
-            "total_ingresos": total_ingresos,
-            "total_egresos": total_egresos,
-            "total_ventas": total_ventas,
-            "ventas_efectivo": ventas_efectivo,
-            "ventas_tarjeta": ventas_tarjeta,
-            "ventas_qr": ventas_qr,
-            "esperado": esperado,
+            **resumen,
             "movimientos": movs[:20],
         },
     )
@@ -137,8 +107,8 @@ def movimiento_caja(request):
                 )
                 messages.success(request, "Movimiento registrado correctamente.")
                 return redirect("caja:arqueo")
-            except ValidationError as e:
-                messages.error(request, e.message)
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
         else:
             messages.error(request, "Formulario inválido. Revisá los campos.")
     else:
@@ -166,33 +136,8 @@ def cierre_caja(request):
         )
         return redirect("caja:apertura")
 
-    movs = caja.movimientos.all()
-
-    total_ingresos = movs.filter(
-        tipo=MovimientoCaja.Tipo.INGRESO
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    total_egresos = movs.filter(
-        tipo=MovimientoCaja.Tipo.EGRESO
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    ventas_efectivo = movs.filter(
-        tipo=MovimientoCaja.Tipo.VENTA,
-        metodo_pago=MovimientoCaja.MetodoPago.EFECTIVO,
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    ventas_tarjeta = movs.filter(
-        tipo=MovimientoCaja.Tipo.VENTA,
-        metodo_pago=MovimientoCaja.MetodoPago.TARJETA,
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    ventas_qr = movs.filter(
-        tipo=MovimientoCaja.Tipo.VENTA,
-        metodo_pago=MovimientoCaja.MetodoPago.QR,
-    ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-    total_ventas = ventas_efectivo + ventas_tarjeta + ventas_qr
-    esperado = total_ingresos + ventas_efectivo - total_egresos
+    resumen = resumen_caja(caja)
+    esperado = resumen["esperado"]
 
     if request.method == "POST":
         form = CierreCajaForm(request.POST)
@@ -214,8 +159,8 @@ def cierre_caja(request):
                 )
                 return redirect("caja:historial_cierres")
 
-            except ValidationError as e:
-                messages.error(request, e.message)
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
         else:
             messages.error(request, "Formulario inválido. Revisá el monto de cierre.")
     else:
@@ -227,13 +172,7 @@ def cierre_caja(request):
         {
             "form": form,
             "caja": caja,
-            "total_ingresos": total_ingresos,
-            "total_egresos": total_egresos,
-            "total_ventas": total_ventas,
-            "ventas_efectivo": ventas_efectivo,
-            "ventas_tarjeta": ventas_tarjeta,
-            "ventas_qr": ventas_qr,
-            "esperado": esperado,
+            **resumen,
         },
     )
 
@@ -247,50 +186,20 @@ def historial_cierres(request):
         .order_by("-fecha_cierre", "-fecha_apertura")
     )
 
-    if not request.user.is_superuser and not request.user.has_perm("ventas.view_venta"):
+    if not request.user.is_superuser and not request.user.has_perm("ventas.view_global_reports"):
         sesiones = sesiones.filter(usuario=request.user)
 
+    page_obj = Paginator(sesiones, 25).get_page(request.GET.get("page"))
     historial = []
-    for sesion in sesiones:
-        movs = sesion.movimientos.all()
-
-        total_ingresos = movs.filter(
-            tipo=MovimientoCaja.Tipo.INGRESO
-        ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-        total_egresos = movs.filter(
-            tipo=MovimientoCaja.Tipo.EGRESO
-        ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-        ventas_efectivo = movs.filter(
-            tipo=MovimientoCaja.Tipo.VENTA,
-            metodo_pago=MovimientoCaja.MetodoPago.EFECTIVO,
-        ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-        ventas_tarjeta = movs.filter(
-            tipo=MovimientoCaja.Tipo.VENTA,
-            metodo_pago=MovimientoCaja.MetodoPago.TARJETA,
-        ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-        ventas_qr = movs.filter(
-            tipo=MovimientoCaja.Tipo.VENTA,
-            metodo_pago=MovimientoCaja.MetodoPago.QR,
-        ).aggregate(s=Sum("monto"))["s"] or Decimal("0")
-
-        total_ventas = ventas_efectivo + ventas_tarjeta + ventas_qr
-        esperado = total_ingresos + ventas_efectivo - total_egresos
+    for sesion in page_obj.object_list:
+        resumen = resumen_caja(sesion)
+        esperado = resumen["esperado"]
         declarado = sesion.monto_cierre_declarado or Decimal("0")
         diferencia = declarado - esperado
 
         historial.append({
             "sesion": sesion,
-            "total_ingresos": total_ingresos,
-            "total_egresos": total_egresos,
-            "ventas_efectivo": ventas_efectivo,
-            "ventas_tarjeta": ventas_tarjeta,
-            "ventas_qr": ventas_qr,
-            "total_ventas": total_ventas,
-            "esperado": esperado,
+            **resumen,
             "declarado": declarado,
             "diferencia": diferencia,
         })
@@ -300,5 +209,6 @@ def historial_cierres(request):
         "caja/historial_cierres.html",
         {
             "historial": historial,
+            "page_obj": page_obj,
         },
     )
