@@ -1,31 +1,330 @@
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from datetime import datetime
+
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required, permission_required
+from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 
 from apps.ventas.models import Venta
-from .selectors import ventas_del_dia_qs, resumen_ventas_del_dia
+from .selectors import (
+    ventas_del_dia_qs,
+    resumen_ventas_del_dia,
+    resumen_ventas,
+    ventas_qs,
+    ventas_por_metodo_pago,
+    ventas_por_usuario,
+    ventas_por_caja,
+    ventas_por_producto,
+    top_productos_vendidos,
+    productos_sin_ventas,
+    productos_baja_rotacion,
+    ventas_por_dia,
+    comparativa_periodo,
+    cierres_caja_qs,
+)
+
+User = get_user_model()
+
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _puede_ver_reportes_global(user):
+    return user.is_superuser or user.has_perm("ventas.view_global_reports")
+
+
+def _puede_ver_cierres(user):
+    return (
+        user.is_superuser
+        or user.has_perm("caja.view_cajasesion")
+        or user.has_perm("ventas.view_venta")
+    )
 
 
 @login_required
+@permission_required("ventas.view_venta", raise_exception=True)
 def reporte_dia(request):
     fecha = timezone.localdate()
+    numero_ticket = request.GET.get("numero_ticket", "").strip()
 
-    # Permiso: si tiene ventas.view_venta ve global, si no ve solo lo suyo
-    puede_ver_global = request.user.has_perm("ventas.view_venta")
-
+    puede_ver_global = _puede_ver_reportes_global(request.user)
     usuario_filtro = None if puede_ver_global else request.user
 
     kpis = resumen_ventas_del_dia(fecha=fecha, usuario=usuario_filtro)
 
     ventas = (
         ventas_del_dia_qs(fecha=fecha, usuario=usuario_filtro)
-        .order_by("-fecha")[:50]
-        .prefetch_related("detalles", "detalles__producto")
+        .order_by("-fecha")
+        .prefetch_related("detalles", "detalles__producto", "pagos")
+    )
+
+    if numero_ticket:
+        try:
+            ventas = ventas.filter(numero_ticket=int(numero_ticket))
+        except ValueError:
+            ventas = ventas.none()
+            messages.error(request, "Número de ticket inválido.")
+
+    ventas = ventas[:50]
+
+    por_metodo = ventas_por_metodo_pago(
+        fecha_desde=fecha,
+        fecha_hasta=fecha,
+        usuario=usuario_filtro,
+    )
+
+    top_productos = top_productos_vendidos(
+        fecha_desde=fecha,
+        fecha_hasta=fecha,
+        usuario=usuario_filtro,
+        limit=5,
     )
 
     ctx = {
         "kpis": kpis,
         "ventas": ventas,
+        "por_metodo": por_metodo,
+        "top_productos": top_productos,
         "puede_ver_global": puede_ver_global,
+        "numero_ticket": numero_ticket,
     }
     return render(request, "reportes/dia.html", ctx)
+
+
+@login_required
+@permission_required("ventas.view_venta", raise_exception=True)
+def reporte_general(request):
+    hoy = timezone.localdate()
+
+    fecha_desde = _parse_date(request.GET.get("fecha_desde")) or hoy
+    fecha_hasta = _parse_date(request.GET.get("fecha_hasta")) or hoy
+    metodo_pago = request.GET.get("metodo_pago", "").strip()
+    usuario_id = request.GET.get("usuario", "").strip()
+    numero_ticket = request.GET.get("numero_ticket", "").strip()
+
+    if fecha_desde > fecha_hasta:
+        messages.error(request, "La fecha desde no puede ser mayor que la fecha hasta.")
+        fecha_desde = fecha_hasta
+
+    puede_ver_global = _puede_ver_reportes_global(request.user)
+    puede_ver_cierres = _puede_ver_cierres(request.user)
+
+    usuario_filtro = None
+    usuarios = (
+        User.objects.filter(is_active=True).order_by("username")
+        if puede_ver_global
+        else User.objects.filter(pk=request.user.pk)
+    )
+
+    if puede_ver_global:
+        if usuario_id:
+            try:
+                usuario_filtro = User.objects.get(pk=int(usuario_id))
+            except (ValueError, User.DoesNotExist):
+                usuario_filtro = None
+    else:
+        usuario_filtro = request.user
+
+    kpis = resumen_ventas(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+        metodo_pago=metodo_pago or None,
+    )
+
+    ventas = (
+        ventas_qs(
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            usuario=usuario_filtro,
+            metodo_pago=metodo_pago or None,
+        )
+        .order_by("-fecha")
+        .prefetch_related("detalles", "detalles__producto", "pagos")
+    )
+
+    if numero_ticket:
+        try:
+            ventas = ventas.filter(numero_ticket=int(numero_ticket))
+        except ValueError:
+            ventas = ventas.none()
+            messages.error(request, "Número de ticket inválido.")
+
+    ventas = ventas[:100]
+
+    por_metodo = ventas_por_metodo_pago(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+    )
+
+    por_usuario = ventas_por_usuario(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=None if puede_ver_global else request.user,
+    )
+
+    por_caja = ventas_por_caja(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+    )
+
+    por_producto = ventas_por_producto(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+    )[:20]
+
+    top_productos = top_productos_vendidos(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+        limit=10,
+    )
+
+    sin_ventas = productos_sin_ventas(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+        solo_activos=True,
+        limit=15,
+    )
+
+    baja_rotacion = productos_baja_rotacion(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+        limit=15,
+    )
+
+    tendencia = ventas_por_dia(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+        metodo_pago=metodo_pago or None,
+    )
+
+    comparativa = comparativa_periodo(
+        fecha_desde=fecha_desde,
+        fecha_hasta=fecha_hasta,
+        usuario=usuario_filtro,
+        metodo_pago=metodo_pago or None,
+    )
+
+    cierres = []
+    if puede_ver_cierres:
+        cierres = cierres_caja_qs(
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            usuario=None if puede_ver_global else request.user,
+        )[:30]
+
+    ctx = {
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "metodo_pago": metodo_pago,
+        "usuario_id": usuario_id,
+        "numero_ticket": numero_ticket,
+        "usuarios": usuarios,
+        "kpis": kpis,
+        "ventas": ventas,
+        "por_metodo": por_metodo,
+        "por_usuario": por_usuario,
+        "por_caja": por_caja,
+        "por_producto": por_producto,
+        "top_productos": top_productos,
+        "sin_ventas": sin_ventas,
+        "baja_rotacion": baja_rotacion,
+        "tendencia": tendencia,
+        "comparativa": comparativa,
+        "cierres": cierres,
+        "puede_ver_global": puede_ver_global,
+        "puede_ver_cierres": puede_ver_cierres,
+    }
+    return render(request, "reportes/general.html", ctx)
+
+
+@login_required
+@permission_required("ventas.view_venta", raise_exception=True)
+def reporte_tickets(request):
+    hoy = timezone.localdate()
+
+    fecha_desde = _parse_date(request.GET.get("fecha_desde")) or hoy
+    fecha_hasta = _parse_date(request.GET.get("fecha_hasta")) or hoy
+    numero_ticket = request.GET.get("numero_ticket", "").strip()
+    usuario_id = request.GET.get("usuario", "").strip()
+
+    if fecha_desde > fecha_hasta:
+        messages.error(request, "La fecha desde no puede ser mayor que la fecha hasta.")
+        fecha_desde = fecha_hasta
+
+    puede_ver_global = _puede_ver_reportes_global(request.user)
+    usuario_filtro = None
+    usuarios = User.objects.filter(is_active=True).order_by("username")
+
+    if puede_ver_global:
+        if usuario_id:
+            try:
+                usuario_filtro = User.objects.get(pk=int(usuario_id))
+            except (ValueError, User.DoesNotExist):
+                usuario_filtro = None
+    else:
+        usuario_filtro = request.user
+
+    tickets = (
+        ventas_qs(
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            usuario=usuario_filtro,
+            metodo_pago=None,
+        )
+        .select_related("usuario", "caja_sesion", "caja_sesion__caja", "cliente")
+        .prefetch_related("detalles", "detalles__producto", "pagos")
+        .order_by("-fecha")
+    )
+
+    if numero_ticket:
+        try:
+            tickets = tickets.filter(numero_ticket=int(numero_ticket))
+        except ValueError:
+            tickets = tickets.none()
+            messages.error(request, "Número de ticket inválido.")
+
+    tickets = tickets[:200]
+
+    ctx = {
+        "tickets": tickets,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "numero_ticket": numero_ticket,
+        "usuario_id": usuario_id,
+        "usuarios": usuarios,
+        "puede_ver_global": puede_ver_global,
+    }
+    return render(request, "reportes/tickets.html", ctx)
+
+
+@login_required
+@permission_required("ventas.view_venta", raise_exception=True)
+def detalle_venta(request, venta_id):
+    puede_ver_global = _puede_ver_reportes_global(request.user)
+
+    venta = get_object_or_404(
+        Venta.objects.select_related("usuario", "caja_sesion", "cliente")
+        .prefetch_related("detalles", "detalles__producto", "pagos"),
+        pk=venta_id,
+    )
+
+    if not puede_ver_global and venta.usuario != request.user:
+        messages.error(request, "No tenés permisos para ver esa venta.")
+        return redirect("reportes:reporte_dia")
+
+    return render(request, "reportes/detalle_venta.html", {"venta": venta})

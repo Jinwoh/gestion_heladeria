@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 
 
 class Categoria(models.Model):
@@ -31,6 +32,10 @@ class Producto(models.Model):
             models.UniqueConstraint(
                 fields=["categoria", "nombre"],
                 name="uq_productos_producto_categoria_nombre",
+            ),
+            models.CheckConstraint(
+                condition=Q(precio__gt=0),
+                name="ck_producto_precio_positivo",
             ),
         ]
         verbose_name = "Producto"

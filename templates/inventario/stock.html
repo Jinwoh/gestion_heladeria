@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Inventario{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Inventario</h1>
+  <form method="get" class="row" style="margin:16px 0">
+    <input type="search" name="q" value="{{ q }}" placeholder="Producto o código">
+    <button class="btn primary" type="submit">Buscar</button>
+    <a class="btn warn" href="{% url 'inventario:stock' %}">Limpiar</a>
+  </form>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Producto</th><th>Categoría</th><th>Código</th><th style="text-align:right">Existencia</th></tr></thead>
+      <tbody>
+      {% for stock in stocks %}
+        <tr>
+          <td>{{ stock.producto.nombre }}</td>
+          <td>{{ stock.producto.categoria.nombre }}</td>
+          <td>{{ stock.producto.codigo|default:"-" }}</td>
+          <td style="text-align:right">{{ stock.cantidad }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">No se encontraron existencias.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if puede_ajustar %}
+<section class="card" style="margin-top:18px">
+  <h2>Movimiento auditado</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn primary" type="submit">Guardar movimiento</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

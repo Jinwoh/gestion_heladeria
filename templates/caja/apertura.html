@@ -6,16 +6,30 @@
     <h1>Apertura de Caja</h1>
 
     {% if caja %}
-    
-      <div class="msg">Ya hay una caja abierta (ID {{ caja.id }}).</div>
-      <a class="btn warn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
-      <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>
-      {% else %}
+      <div class="msg">
+        Ya hay una caja abierta:
+        <b>{{ caja.caja.numero }}</b> ·
+        Sesión ID <b>{{ caja.id }}</b> ·
+        Usuario <b>{{ caja.usuario.username }}</b>
+      </div>
 
+      <div class="row" style="margin-top:14px">
+        <a class="btn warn" href="{% url 'caja:arqueo' %}">Ir a arqueo</a>
+        <a class="btn danger" href="{% url 'caja:cierre' %}">Ir a cierre</a>
+      </div>
+    {% else %}
       <form method="post">
         {% csrf_token %}
 
         {{ form.non_field_errors }}
+
+        <div class="field">
+          <label>{{ form.caja.label }}</label>
+          {{ form.caja }}
+          {% for err in form.caja.errors %}
+            <div class="msg">{{ err }}</div>
+          {% endfor %}
+        </div>
 
         <div class="field">
           <label>{{ form.monto_apertura.label }}</label>
@@ -33,7 +47,10 @@
           {% endfor %}
         </div>
 
-        <button class="btn primary" type="submit">Abrir caja</button>
+        <div class="row" style="margin-top:14px">
+          <button class="btn primary" type="submit">Abrir caja</button>
+          <a class="btn warn" href="{% url 'home' %}">Cancelar</a>
+        </div>
       </form>
     {% endif %}
   </div>

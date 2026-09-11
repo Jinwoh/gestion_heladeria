@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load reportes_extras %}
+{% block title %}Detalle de venta{% endblock %}
+
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      {% if venta %}
+        <h1>Detalle de venta #{{ venta.numero_ticket|stringformat:"08d" }}</h1>
+
+        <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+          <h3>Información general</h3>
+          <div class="msg">Fecha: <b>{{ venta.fecha|date:"d/m/Y" }}</b></div>
+          <div class="msg">Hora: <b>{{ venta.fecha|date:"H:i" }}</b></div>
+          <div class="msg">Cajero: <b>{{ venta.usuario.username }}</b></div>
+          <div class="msg">
+            Caja:
+            <b>
+              {% if venta.caja_sesion.caja %}
+                {{ venta.caja_sesion.caja.numero }}
+              {% else %}
+                #{{ venta.caja_sesion.id }}
+              {% endif %}
+            </b>
+          </div>
+          <div class="msg">
+            Cliente:
+            <b>
+              {% if venta.cliente %}
+                {{ venta.cliente.nombre_completo }}
+              {% else %}
+                Consumidor final
+              {% endif %}
+            </b>
+          </div>
+          <div class="msg">Estado: <b>{{ venta.get_estado_display }}</b></div>
+          <div class="msg">Total: <b>{{ venta.total|gs }}</b></div>
+          {% if venta.numero_ticket %}
+            <div class="msg">N° Ticket: <b>{{ venta.numero_ticket|stringformat:"08d" }}</b></div>
+          {% endif %}
+        </div>
+
+        <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+          <h3>Pagos</h3>
+          {% if venta.pagos.all %}
+            <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
+              <table style="width:100%;border-collapse:collapse">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Método</th>
+                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for pago in venta.pagos.all %}
+                    <tr>
+                      <td style="padding:10px;border-bottom:1px solid var(--border)">
+                        {{ pago.get_metodo_pago_display }}
+                      </td>
+                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                        {{ pago.monto|gs }}{% if pago.monto_recibido != pago.monto %} (recibido {{ pago.monto_recibido|gs }}){% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="muted">La venta no tiene pagos registrados.</p>
+          {% endif %}
+        </div>
+
+        <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+          <h3>Items vendidos</h3>
+          {% if venta.detalles.all %}
+            <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
+              <table style="width:100%;border-collapse:collapse">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Producto</th>
+                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Cantidad</th>
+                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Precio unitario</th>
+                    <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for d in venta.detalles.all %}
+                    <tr>
+                      <td style="padding:10px;border-bottom:1px solid var(--border)">
+                        {{ d.producto.nombre }}
+                      </td>
+                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                        {{ d.cantidad }}
+                      </td>
+                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                        {{ d.precio_unitario|gs }}
+                      </td>
+                      <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                        {{ d.subtotal|gs }}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="muted">La venta no tiene detalles registrados.</p>
+          {% endif %}
+        </div>
+
+      {% else %}
+        <h1>Detalle de venta</h1>
+        <p class="muted">No se pudo mostrar la venta solicitada.</p>
+      {% endif %}
+
+      <div class="row" style="margin-top:14px">
+        <a class="btn" href="{% url 'reportes:reporte_tickets' %}">Volver a tickets</a>
+        <a class="btn warn" href="{% url 'reportes:reporte_general' %}">Reporte general</a>
+      </div>
+
+      {% if venta.estado == "CONFIRMADA" and perms.ventas.cancel_venta %}
+      <form method="post" action="{% url 'ventas:anular' venta.id %}" style="margin-top:18px" onsubmit="return confirm('¿Confirmás la anulación? Esta acción registrará contramovimientos.');">
+        {% csrf_token %}
+        <div class="field">
+          <label for="id_motivo">Motivo de anulación</label>
+          <input id="id_motivo" name="motivo" maxlength="255" required>
+        </div>
+        <button class="btn danger" type="submit">Anular venta</button>
+      </form>
+      {% elif venta.estado == "ANULADA" %}
+        <p class="msg warning">Anulada: {{ venta.motivo_anulacion }} · {{ venta.anulada_en|date:"d/m/Y H:i" }}</p>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

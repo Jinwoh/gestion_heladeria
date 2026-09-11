@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load reportes_extras %}
+{% block title %}Reporte de tickets{% endblock %}
+
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      <h1>Tickets emitidos</h1>
+
+      <form method="get" class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <div class="row" style="gap:12px; align-items:end; flex-wrap:wrap">
+          <div class="field">
+            <label for="id_fecha_desde">Fecha desde</label>
+            <input type="date" id="id_fecha_desde" name="fecha_desde" value="{{ fecha_desde|date:'Y-m-d' }}">
+          </div>
+
+          <div class="field">
+            <label for="id_fecha_hasta">Fecha hasta</label>
+            <input type="date" id="id_fecha_hasta" name="fecha_hasta" value="{{ fecha_hasta|date:'Y-m-d' }}">
+          </div>
+
+          <div class="field">
+            <label for="id_numero_ticket">N° Ticket</label>
+            <input type="text" id="id_numero_ticket" name="numero_ticket" value="{{ numero_ticket }}" placeholder="Ej.: 00000015">
+          </div>
+
+          {% if puede_ver_global %}
+          <div class="field">
+            <label for="id_usuario">Cajero</label>
+            <select id="id_usuario" name="usuario">
+              <option value="">Todos</option>
+              {% for u in usuarios %}
+                <option value="{{ u.id }}" {% if usuario_id == u.id|stringformat:"s" %}selected{% endif %}>
+                  {{ u.username }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
+          <div class="row" style="gap:10px">
+            <button class="btn primary" type="submit">Filtrar</button>
+            <a class="btn warn" href="{% url 'reportes:reporte_tickets' %}">Limpiar</a>
+          </div>
+        </div>
+      </form>
+
+      <div class="card" style="margin-top:14px;background:rgba(15,23,42,.55)">
+        <h3>Listado de tickets</h3>
+
+        {% if tickets %}
+          <div style="overflow:auto;border:1px solid var(--border);border-radius:12px">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Ticket</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Fecha</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Hora</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Cajero</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Caja</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Cliente</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Pagos</th>
+                  <th style="text-align:right;padding:10px;border-bottom:1px solid var(--border)">Total</th>
+                  <th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for v in tickets %}
+                  <tr>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      <b>#{{ v.numero_ticket|stringformat:"08d" }}</b>
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {{ v.fecha|date:"d/m/Y" }}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {{ v.fecha|date:"H:i" }}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {{ v.usuario.username }}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {% if v.caja_sesion.caja %}
+                        {{ v.caja_sesion.caja.numero }}
+                      {% else %}
+                        #{{ v.caja_sesion.id }}
+                      {% endif %}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {% if v.cliente %}
+                        {{ v.cliente.nombre_completo }}
+                      {% else %}
+                        Consumidor final
+                      {% endif %}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border)">
+                      {% for pago in v.pagos.all %}
+                        <span class="pill">{{ pago.get_metodo_pago_display }}: {{ pago.monto|gs }}</span>
+                      {% endfor %}
+                    </td>
+                    <td style="padding:10px;border-bottom:1px solid var(--border);text-align:right">
+                      {{ v.total|gs }}
+                    </td>
+                  <td style="padding:10px;border-bottom:1px solid var(--border)">
+                    <div class="row" style="gap:8px; flex-wrap:wrap">
+                      <a class="btn" href="{% url 'reportes:detalle_venta' v.id %}">Ver detalle</a>
+                      <a class="btn primary" href="{% url 'ventas:ticket' v.id %}" target="_blank">Reimprimir ticket</a>
+                    </div>
+                  </td>
+                  </tr>
+                  <tr>
+                    <td colspan="9" style="padding:10px;border-bottom:1px solid var(--border)">
+                      {% for d in v.detalles.all %}
+                        <span class="pill">{{ d.producto.nombre }} x{{ d.cantidad }} · {{ d.subtotal|gs }}</span>
+                      {% endfor %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="muted">No hay tickets emitidos para esos filtros.</p>
+        {% endif %}
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <a class="btn" href="{% url 'reportes:reporte_general' %}">Volver al reporte general</a>
+        <a class="btn warn" href="{% url 'reportes:reporte_dia' %}">Reporte del día</a>
+      </div>
+    </section>
+  </div>
+{% endblock %}

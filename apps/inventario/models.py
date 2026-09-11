@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from apps.productos.models import Producto
 
 
@@ -10,6 +11,12 @@ class Stock(models.Model):
     actualizado_en = models.DateTimeField(auto_now=True)
 
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(cantidad__gte=0),
+                name="ck_stock_cantidad_no_negativa",
+            ),
+        ]
         verbose_name = "Stock"
         verbose_name_plural = "Stock"
 
@@ -32,6 +39,15 @@ class MovimientoStock(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(tipo="AJUSTE")
+                    | Q(tipo__in=["ENTRADA", "SALIDA"], cantidad__gt=0)
+                ),
+                name="ck_mov_stock_cantidad_valida",
+            ),
+        ]
         ordering = ["-creado_en"]
         verbose_name = "Movimiento de Stock"
         verbose_name_plural = "Movimientos de Stock"
