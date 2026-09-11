@@ -4,6 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    {% block extra_head %}{% endblock %}
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{% block title %}Heladería{% endblock %}</title>
   </head>
@@ -241,5 +242,6 @@
         });
       });
     </script>
+    {% block extra_js %}{% endblock %}
   </body>
 </html>

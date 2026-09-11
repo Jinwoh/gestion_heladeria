@@ -1,64 +1,174 @@
 {% extends "base.html" %}
-{% block title %}Inicio{% endblock %}
+{% load static reportes_extras %}
+{% block title %}Dashboard de ventas{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" defer></script>
+{% endblock %}
 
 {% block content %}
-  <div class="grid">
-    <section class="card">
-      <h1>Panel principal</h1>
-      <p class="muted">
-        Bienvenido, <b>{{ request.user.username }}</b>. Seleccioná un módulo para comenzar.
-      </p>
+<div class="dashboard-page">
+  <header class="dashboard-header">
+    <div>
+      <p class="dashboard-eyebrow">Resumen comercial</p>
+      <h1>Dashboard de ventas</h1>
+      <p class="dashboard-period">{{ dashboard.rango }} · {% if dashboard.globales %}Todos los usuarios{% else %}Mis ventas{% endif %}</p>
+    </div>
+    <form method="get" class="dashboard-controls">
+      <label class="sr-only" for="periodSelect">Periodo</label>
+      <select id="periodSelect" name="period">
+        <option value="6m" {% if dashboard.periodo == "6m" %}selected{% endif %}>Últimos 6 meses</option>
+        <option value="12m" {% if dashboard.periodo == "12m" %}selected{% endif %}>Últimos 12 meses</option>
+        <option value="ytd" {% if dashboard.periodo == "ytd" %}selected{% endif %}>Año en curso</option>
+      </select>
+      <button class="dashboard-refresh" type="submit"><span aria-hidden="true">↻</span> Actualizar</button>
+    </form>
+  </header>
 
-      <div class="grid" style="margin-top:16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
-        {% if perms.ventas.add_venta or perms.productos.view_producto %}<div class="card" style="background:rgba(15,23,42,.55)">
-          <h3>Ventas</h3>
-          <p class="muted">Gestioná el punto de venta y el catálogo visible.</p>
-          <div class="row">
-            {% if perms.ventas.add_venta %}<a class="btn" href="{% url 'ventas:pos' %}">Ir al POS</a>{% endif %}
-            {% if perms.productos.view_producto %}<a class="btn warn" href="{% url 'ventas:productos' %}">Productos</a>{% endif %}
-          </div>
-        </div>{% endif %}
+  {% if perms.ventas.view_venta %}
+  <section class="dashboard-kpis" aria-label="Indicadores principales">
+    {% for kpi in dashboard.kpis %}
+      <article class="dashboard-kpi">
+        <p class="dashboard-kpi-label">{{ kpi.label }}</p>
+        <p class="dashboard-kpi-value">
+          {% if kpi.format == "currency" %}{{ kpi.value|gs }}{% else %}{{ kpi.value }}{% endif %}
+        </p>
+        <span class="dashboard-delta {{ kpi.direction }}">
+          {% if kpi.direction == "up" %}↑{% else %}↓{% endif %} {{ kpi.delta_abs }}% vs. periodo anterior
+        </span>
+      </article>
+    {% endfor %}
+  </section>
 
-        {% if perms.caja.view_cajasesion or perms.caja.add_cajasesion or perms.caja.change_cajasesion %}<div class="card" style="background:rgba(15,23,42,.55)">
-          <h3>Caja</h3>
-          <p class="muted">Apertura, arqueo y cierre de caja.</p>
-          <div class="row">
-            {% if perms.caja.add_cajasesion %}<a class="btn" href="{% url 'caja:apertura' %}">Apertura</a>{% endif %}
-            {% if perms.caja.view_cajasesion %}<a class="btn" href="{% url 'caja:arqueo' %}">Arqueo</a>{% endif %}
-            {% if perms.caja.change_cajasesion %}<a class="btn danger" href="{% url 'caja:cierre' %}">Cierre</a>{% endif %}
-          </div>
-        </div>{% endif %}
+  <section class="dashboard-grid">
+    <article class="dashboard-panel">
+      <h2>Ventas por medio de pago</h2>
+      <p>Importe aplicado en el periodo seleccionado</p>
+      <div class="dashboard-chart h-220">
+        <canvas id="paymentChart" role="img" aria-label="Gráfico de ventas por medio de pago"></canvas>
+      </div>
+      <p class="dashboard-chart-error" hidden>No se pudo cargar el gráfico.</p>
+    </article>
 
-        {% if perms.ventas.view_venta %}<div class="card" style="background:rgba(15,23,42,.55)">
-          <h3>Reportes</h3>
-          <p class="muted">Consultá el resumen diario y los reportes generales.</p>
-          <div class="row">
-            <a class="btn" href="{% url 'reportes:reporte_dia' %}">Reporte día</a>
-            <a class="btn warn" href="{% url 'reportes:reporte_general' %}">Reporte general</a>
-          </div>
-        </div>{% endif %}
+    <article class="dashboard-panel">
+      <h2>Tendencia mensual</h2>
+      <p>Evolución de ingresos confirmados</p>
+      <div class="dashboard-chart h-220">
+        <canvas id="trendChart" role="img" aria-label="Gráfico de tendencia mensual"></canvas>
+      </div>
+      <p class="dashboard-chart-error" hidden>No se pudo cargar el gráfico.</p>
+    </article>
+  </section>
 
-        {% if perms.inventario.view_stock or perms.clientes.view_cliente %}
-        <div class="card" style="background:rgba(15,23,42,.55)">
-          <h3>Gestión</h3>
-          <p class="muted">Consultá existencias y clientes.</p>
-          <div class="row">
-            {% if perms.inventario.view_stock %}<a class="btn" href="{% url 'inventario:stock' %}">Inventario</a>{% endif %}
-            {% if perms.clientes.view_cliente %}<a class="btn" href="{% url 'clientes:lista' %}">Clientes</a>{% endif %}
-          </div>
+  <section class="dashboard-grid">
+    <article class="dashboard-panel">
+      <h2>Participación por producto</h2>
+      <p>Los cinco productos con mayor facturación</p>
+      <div class="dashboard-chart h-180">
+        <canvas id="productChart" role="img" aria-label="Participación de ventas por producto"></canvas>
+      </div>
+      <div class="dashboard-legend" id="productLegend"></div>
+      <p class="dashboard-empty" id="productEmpty" hidden>No hay ventas de productos en este periodo.</p>
+    </article>
+
+    <article class="dashboard-panel dashboard-goal-panel">
+      <div class="dashboard-goal-heading">
+        <div>
+          <h2>Cumplimiento de meta</h2>
+          <p>Meta del periodo: {{ dashboard.meta_periodo|gs }}</p>
         </div>
-        {% endif %}
-
-        {% if request.user.is_staff %}
-        <div class="card" style="background:rgba(15,23,42,.55)">
-          <h3>Administración</h3>
-          <p class="muted">Acceso al panel administrativo de Django.</p>
-          <div class="row">
-            <a class="btn" href="/admin/">Ir al admin</a>
-          </div>
-        </div>
+        {% if perms.core.change_configuraciondashboard %}
+        <details class="dashboard-goal-editor">
+          <summary>Editar meta</summary>
+          <form method="post" action="{% url 'actualizar_meta_dashboard' %}">
+            {% csrf_token %}
+            <input type="hidden" name="period" value="{{ dashboard.periodo }}">
+            <label for="metaMensual">Meta mensual (Gs.)</label>
+            <div class="dashboard-goal-form-row">
+              <input id="metaMensual" name="meta_mensual" type="number" min="1" step="1" inputmode="numeric" value="{{ dashboard.meta_mensual|floatformat:0 }}" required>
+              <button class="btn primary" type="submit">Guardar</button>
+            </div>
+          </form>
+        </details>
         {% endif %}
       </div>
-    </section>
-  </div>
+      <div class="dashboard-chart h-180">
+        <canvas id="goalChart" role="img" aria-label="Cumplimiento de meta de ventas"></canvas>
+      </div>
+      <strong class="dashboard-goal-value">{{ dashboard.meta_pct }}%</strong>
+      <span class="dashboard-goal-caption">del objetivo alcanzado</span>
+      {% if dashboard.meta_actualizada_en %}
+      <small class="dashboard-goal-audit">
+        Actualizada {{ dashboard.meta_actualizada_en|date:"d/m/Y H:i" }}{% if dashboard.meta_actualizada_por %} por {{ dashboard.meta_actualizada_por.username }}{% endif %}
+      </small>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="dashboard-panel dashboard-full">
+    <div class="dashboard-timeline-heading">
+      <h2>Ventas a través del tiempo</h2>
+      <p>Facturación mensual en barras y cantidad de operaciones en línea</p>
+    </div>
+    <div class="dashboard-chart h-280">
+      <canvas id="timelineChart" role="img" aria-label="Gráfico combinado de ventas y operaciones a través del tiempo"></canvas>
+    </div>
+    <p class="dashboard-chart-error" hidden>No se pudo cargar el gráfico.</p>
+  </section>
+
+  <section class="dashboard-panel dashboard-full">
+    <div class="dashboard-table-heading">
+      <div>
+        <h2>Resumen por vendedor</h2>
+        <p>Desempeño dentro del periodo seleccionado</p>
+      </div>
+      <a class="btn" href="{% url 'reportes:reporte_general' %}">Ver reporte completo</a>
+    </div>
+    <div class="dashboard-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Vendedor</th>
+            <th class="num">Ventas</th>
+            <th class="num">Operaciones</th>
+            <th class="num">Ticket promedio</th>
+            <th class="num">Participación</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for vendedor in dashboard.vendedores %}
+          <tr>
+            <td><span class="dashboard-avatar">{{ vendedor.usuario__username|slice:":1"|upper }}</span>{{ vendedor.usuario__username }}</td>
+            <td class="num">{{ vendedor.total|gs }}</td>
+            <td class="num">{{ vendedor.operaciones }}</td>
+            <td class="num">{{ vendedor.ticket_promedio|gs }}</td>
+            <td class="num"><span class="dashboard-share">{{ vendedor.participacion }}%</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="dashboard-empty-cell">No hay ventas confirmadas en este periodo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {{ dashboard.charts|json_script:"dashboard-chart-data" }}
+  {% else %}
+  <section class="dashboard-panel dashboard-empty-state">
+    <h2>Sin acceso a estadísticas de ventas</h2>
+    <p>Tu usuario no posee el permiso necesario para visualizar este dashboard.</p>
+  </section>
+  {% endif %}
+
+  <nav class="dashboard-actions" aria-label="Acciones rápidas">
+    {% if perms.ventas.add_venta %}<a class="btn primary" href="{% url 'ventas:pos' %}">Nueva venta</a>{% endif %}
+    {% if perms.caja.view_cajasesion %}<a class="btn" href="{% url 'caja:arqueo' %}">Ver caja</a>{% endif %}
+    {% if perms.inventario.view_stock %}<a class="btn" href="{% url 'inventario:stock' %}">Inventario</a>{% endif %}
+  </nav>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/dashboard.js' %}" defer></script>
 {% endblock %}

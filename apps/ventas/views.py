@@ -1,16 +1,13 @@
 from decimal import Decimal, InvalidOperation
-<<<<<<< Updated upstream
-from django.views.decorators.cache import never_cache
-=======
 import logging
 
->>>>>>> Stashed changes
 from django.contrib import messages
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import redirect, render, get_object_or_404
+from django.views.decorators.cache import never_cache
 
 from apps.caja.services import get_caja_abierta
 from apps.inventario.models import Stock

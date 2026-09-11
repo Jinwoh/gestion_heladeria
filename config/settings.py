@@ -1,5 +1,6 @@
 import os
 import secrets
+from decimal import Decimal
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -153,6 +154,7 @@ LOGOUT_REDIRECT_URL = "login"
 COMERCIO_NOMBRE = os.getenv("COMERCIO_NOMBRE", "Heladería")
 COMERCIO_DIRECCION = os.getenv("COMERCIO_DIRECCION", "")
 COMERCIO_RUC = os.getenv("COMERCIO_RUC", "")
+DASHBOARD_META_MENSUAL = Decimal(os.getenv("DASHBOARD_META_MENSUAL", "5000000"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
