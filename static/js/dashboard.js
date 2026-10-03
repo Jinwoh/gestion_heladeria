@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const muted = "#7a8299";
   const grid = "rgba(255,255,255,.07)";
   const colors = ["#22c55e", "#3b82f6", "#f59e0b", "#a78bfa", "#f87171"];
-  const money = (value) => `Gs. ${Math.round(value).toLocaleString("es-PY")}`;
+  const money = (value) => `${Math.round(value).toLocaleString("es-PY")}Gs`;
   const common = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{backgroundColor:"#111e35",titleColor:text,bodyColor:text,borderColor:"rgba(255,255,255,.12)",borderWidth:1,callbacks:{label:(context)=>money(context.raw)}} } };
   new Chart(document.getElementById("paymentChart"), { type:"bar", data:{labels:data.payments.labels,datasets:[{data:data.payments.data,backgroundColor:colors.slice(0,3),borderRadius:6,maxBarThickness:42}]}, options:{...common,scales:{y:{beginAtZero:true,grid:{color:grid},ticks:{color:muted,callback:(value)=>money(value)}},x:{grid:{display:false},ticks:{color:muted}}}} });
   new Chart(document.getElementById("trendChart"), { type:"line", data:{labels:data.trend.labels,datasets:[{data:data.trend.data,borderColor:"#22c55e",backgroundColor:"rgba(34,197,94,.10)",fill:true,tension:.32,pointRadius:3,pointBackgroundColor:"#4ade80"}]}, options:{...common,scales:{y:{beginAtZero:true,grid:{color:grid},ticks:{color:muted,callback:(value)=>money(value)}},x:{grid:{display:false},ticks:{color:muted}}}} });

@@ -67,9 +67,9 @@
                   <td style="padding:10px; border-bottom:1px solid var(--border)">{{ p.id }}</td>
                   <td style="padding:10px; border-bottom:1px solid var(--border)"><b>{{ p.nombre }}</b></td>
                   <td style="padding:10px; border-bottom:1px solid var(--border)">{{ p.categoria.nombre }}</td>
-                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">{{ p.precio }}</td>
+                  <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">{{ p.precio|gs }}</td>
                   <td style="padding:10px; border-bottom:1px solid var(--border); text-align:right">
-                    {{ stock_map|get_item:p.id|default:"0" }}
+                    {{ stock_map|get_item:p.id|default:"0"|cantidad }}
                   </td>
                   <td style="padding:10px; border-bottom:1px solid var(--border); text-align:center">
                     {% if p.activo %}

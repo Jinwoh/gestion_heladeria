@@ -11,6 +11,5 @@ def gs(value):
     except (InvalidOperation, TypeError, ValueError):
         return value
 
-    s = f"{n:,.0f}"
-    s = s.replace(",", ".")
-    return f"Gs. {s}"
+    s = f"{n:,.0f}".replace(",", ".")
+    return f"{s}Gs"

@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 {% block title %}POS{% endblock %}
-{% load pos_extras %}
+{% load static pos_extras %}
 
 {% block content %}
-<div class="pos-layout">
+<div
+  class="pos-layout"
+  data-cart-url="{% url 'ventas:cart_api' %}"
+  data-has-caja="{% if caja %}1{% else %}0{% endif %}"
+>
 
   <section class="pos-products card">
     <div class="pos-header">
@@ -13,7 +17,7 @@
           <p class="muted">
             Caja <b class="text-brand">{{ caja.caja.numero }}</b>
             &nbsp;·&nbsp; Sesión: <b>#{{ caja.id }}</b>
-            &nbsp;·&nbsp; Apertura: <b>{{ caja.monto_apertura }}</b>
+            &nbsp;·&nbsp; Apertura: <b>{{ caja.monto_apertura|gs }}</b>
             &nbsp;·&nbsp; <span>{{ caja.fecha_apertura|date:"d/m/Y H:i" }}</span>
           </p>
         {% else %}
@@ -72,20 +76,28 @@
         </thead>
         <tbody>
           {% for p in productos %}
-          {% with stock=stock_map|get_item:p.id|default:"0" %}
-          <tr class="{% if stock == '0' or stock == 0 %}pos-row-empty{% endif %}">
+          {% with stock=stock_map|get_item:p.id|default:0 cart_qty=cart_quantities|get_item:p.id|default:0 remaining=stock_remaining_map|get_item:p.id|default:0 %}
+          <tr data-product-row="{{ p.id }}" class="{% if stock == 0 %}pos-row-empty{% endif %}">
             <td><span class="pos-product-name">{{ p.nombre }}</span></td>
             <td><span class="pos-cat">{{ p.categoria.nombre }}</span></td>
-            <td style="text-align:right; font-family:'DM Mono',monospace; font-size:.85rem">{{ p.precio }}</td>
+            <td style="text-align:right; font-family:'DM Mono',monospace; font-size:.85rem">{{ p.precio|gs }}</td>
             <td style="text-align:right">
-              {% if stock == '0' or stock == 0 %}
+              {% if stock == 0 %}
                 <span class="badge badge-empty">Sin stock</span>
               {% else %}
-                <span class="badge badge-stock">{{ stock }}</span>
+                <span class="stock-breakdown" data-stock="{{ stock|cantidad }}" data-product-id="{{ p.id }}">
+                  <span class="badge badge-stock stock-current">{{ stock|cantidad }}</span>
+                  <span class="stock-cart {% if not cart_qty %}is-hidden{% endif %}">
+                    −<span class="stock-cart-value">{{ cart_qty }}</span>
+                  </span>
+                  <span class="stock-remaining {% if not cart_qty %}is-hidden{% endif %}">
+                    = <span class="stock-remaining-value">{{ remaining|cantidad }}</span> disp.
+                  </span>
+                </span>
               {% endif %}
             </td>
             <td style="text-align:center">
-              <form method="post" class="pos-add-form">
+              <form method="post" class="pos-add-form" id="pos-add-{{ p.id }}">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add">
                 <input type="hidden" name="producto_id" value="{{ p.id }}">
@@ -93,20 +105,22 @@
                   name="cantidad"
                   type="number"
                   min="1"
+                  max="{{ remaining|cantidad }}"
                   value="1"
                   class="pos-qty-input"
-                  {% if not caja %}disabled{% endif %}
+                  {% if not caja or remaining == 0 %}disabled{% endif %}
                 />
+              </form>
             </td>
             <td style="text-align:right">
                 <button
-                  class="btn btn-add {% if not caja or stock == '0' or stock == 0 %}btn-add-disabled{% endif %}"
+                  class="btn btn-add {% if not caja or remaining == 0 %}btn-add-disabled{% endif %}"
                   type="submit"
-                  {% if not caja or stock == '0' or stock == 0 %}disabled{% endif %}
+                  form="pos-add-{{ p.id }}"
+                  {% if not caja or remaining == 0 %}disabled{% endif %}
                 >
                   Agregar
                 </button>
-              </form>
             </td>
           </tr>
           {% endwith %}
@@ -124,16 +138,15 @@
       <h2>Carrito</h2>
     </div>
 
-    {% if carrito_items %}
-      <div class="cart-items">
+      <div class="cart-items" id="cart-items">
         {% for item in carrito_items %}
-        <div class="cart-item">
+        <div class="cart-item" data-cart-product-id="{{ item.producto_id }}">
           <div class="cart-item-info">
             <span class="cart-item-name">{{ item.nombre }}</span>
-            <span class="cart-item-meta">{{ item.categoria }} &nbsp;·&nbsp; {{ item.precio }} c/u</span>
+            <span class="cart-item-meta">{{ item.categoria }} &nbsp;·&nbsp; {{ item.precio|gs }} c/u</span>
           </div>
           <div class="cart-item-right">
-            <span class="cart-item-subtotal">{{ item.subtotal }}</span>
+            <span class="cart-item-subtotal">{{ item.subtotal|gs }}</span>
             <form method="post" class="cart-update-form">
               {% csrf_token %}
               <input type="hidden" name="action" value="update">
@@ -146,10 +159,15 @@
         {% endfor %}
       </div>
 
-      <div class="cart-footer">
+      <div class="cart-empty {% if carrito_items %}is-hidden{% endif %}" id="cart-empty">
+        <p class="muted">El carrito está vacío.</p>
+        <p class="muted" style="font-size:.8rem; margin-top:4px">Agregá productos desde la tabla.</p>
+      </div>
+
+      <div class="cart-footer {% if not carrito_items %}is-hidden{% endif %}" id="cart-footer">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
           <span class="payment-label">Total de la venta</span>
-          <strong id="total-venta" data-total="{{ carrito_total }}">{{ carrito_total }}</strong>
+          <strong id="total-venta" data-total="{{ carrito_total }}">{{ carrito_total|gs }}</strong>
         </div>
 
         <form method="post" class="cart-confirm-form" id="form-pago-mixto">
@@ -207,23 +225,23 @@
 
             <div class="field" style="margin-bottom:10px;">
               <label for="id_monto_efectivo">Efectivo</label>
-              <input type="number" step="0.01" min="0" name="monto_efectivo" id="id_monto_efectivo" value="0">
+              <input type="number" step="1" min="0" name="monto_efectivo" id="id_monto_efectivo" value="0">
             </div>
 
             <div class="field" style="margin-bottom:10px;">
               <label for="id_monto_tarjeta">Tarjeta</label>
-              <input type="number" step="0.01" min="0" name="monto_tarjeta" id="id_monto_tarjeta" value="0">
+              <input type="number" step="1" min="0" name="monto_tarjeta" id="id_monto_tarjeta" value="0">
             </div>
 
             <div class="field" style="margin-bottom:10px;">
               <label for="id_monto_qr">QR</label>
-              <input type="number" step="0.01" min="0" name="monto_qr" id="id_monto_qr" value="0">
+              <input type="number" step="1" min="0" name="monto_qr" id="id_monto_qr" value="0">
             </div>
 
             <div class="card" style="margin-top:12px;background:rgba(15,23,42,.55)">
-              <div class="msg">Total cargado: <b id="total-cargado">0.00</b></div>
-              <div class="msg">Saldo pendiente: <b id="saldo-pendiente">{{ carrito_total }}</b></div>
-              <div class="msg">Vuelto estimado: <b id="vuelto-estimado">0.00</b></div>
+              <div class="msg">Total cargado: <b id="total-cargado">0Gs</b></div>
+              <div class="msg">Saldo pendiente: <b id="saldo-pendiente">{{ carrito_total|gs }}</b></div>
+              <div class="msg">Vuelto estimado: <b id="vuelto-estimado">0Gs</b></div>
               <div class="msg" id="estado-pago">La suma de los montos debe cubrir el total. El excedente solo puede darse en efectivo.</div>
             </div>
           </div>
@@ -242,13 +260,6 @@
         </form>
       </div>
 
-    {% else %}
-      <div class="cart-empty">
-        <p class="muted">El carrito está vacío.</p>
-        <p class="muted" style="font-size:.8rem; margin-top:4px">Agregá productos desde la tabla.</p>
-      </div>
-    {% endif %}
-
     <div class="cart-nav">
       <a class="btn" href="{% url 'caja:arqueo' %}">Arqueo</a>
       <a class="btn btn-danger-ghost" href="{% url 'caja:cierre' %}">Cierre</a>
@@ -260,99 +271,8 @@
   </aside>
 </div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const totalVentaEl = document.getElementById("total-venta");
-    if (!totalVentaEl) return;
+{% endblock %}
 
-    const totalVenta = parseFloat(totalVentaEl.dataset.total || "0");
-    const efectivoEl = document.getElementById("id_monto_efectivo");
-    const tarjetaEl = document.getElementById("id_monto_tarjeta");
-    const qrEl = document.getElementById("id_monto_qr");
-    const totalCargadoEl = document.getElementById("total-cargado");
-    const saldoPendienteEl = document.getElementById("saldo-pendiente");
-    const vueltoEstimadoEl = document.getElementById("vuelto-estimado");
-    const estadoPagoEl = document.getElementById("estado-pago");
-    const btnConfirmar = document.getElementById("btn-confirmar-venta");
-    const form = document.getElementById("form-pago-mixto");
-
-    function val(el) {
-      return parseFloat(el.value || "0") || 0;
-    }
-
-    function actualizarPago() {
-      const efectivo = val(efectivoEl);
-      const tarjeta = val(tarjetaEl);
-      const qr = val(qrEl);
-
-      const totalCargado = efectivo + tarjeta + qr;
-      const saldoSinEfectivo = totalVenta - tarjeta - qr;
-      const saldoParaEfectivo = Math.max(saldoSinEfectivo, 0);
-      const vuelto = efectivo > saldoParaEfectivo ? (efectivo - saldoParaEfectivo) : 0;
-      const saldoPendiente = totalCargado < totalVenta ? (totalVenta - totalCargado) : 0;
-
-      totalCargadoEl.textContent = totalCargado.toFixed(2);
-      saldoPendienteEl.textContent = saldoPendiente.toFixed(2);
-      vueltoEstimadoEl.textContent = vuelto.toFixed(2);
-
-      if (totalCargado < totalVenta) {
-        estadoPagoEl.textContent = "El monto cargado no alcanza para cubrir la venta.";
-        btnConfirmar.disabled = true;
-      } else if ((tarjeta + qr) > totalVenta) {
-        estadoPagoEl.textContent = "Tarjeta y QR no pueden superar por sí solos el total.";
-        btnConfirmar.disabled = true;
-      } else {
-        estadoPagoEl.textContent = "Pago válido para confirmar.";
-        btnConfirmar.disabled = false;
-      }
-    }
-
-    [efectivoEl, tarjetaEl, qrEl].forEach((el) => {
-      el.addEventListener("input", actualizarPago);
-    });
-
-    form.addEventListener("submit", function (e) {
-      const efectivo = val(efectivoEl);
-      const tarjeta = val(tarjetaEl);
-      const qr = val(qrEl);
-      const totalCargado = efectivo + tarjeta + qr;
-
-      if (totalCargado < totalVenta) {
-        e.preventDefault();
-        alert("El monto pagado es menor al total de la venta.");
-        return;
-      }
-
-      if ((tarjeta + qr) > totalVenta) {
-        e.preventDefault();
-        alert("Tarjeta y QR no pueden superar el total de la venta.");
-        return;
-      }
-    });
-
-    actualizarPago();
-  });
-  const btnToggleCliente = document.getElementById("btn-toggle-cliente");
-const panelClienteNuevo = document.getElementById("panel-cliente-nuevo");
-const inputClienteNuevo = document.getElementById("id_cliente_nuevo");
-const selectCliente = document.getElementById("id_cliente_id");
-
-if (btnToggleCliente && panelClienteNuevo && inputClienteNuevo) {
-  btnToggleCliente.addEventListener("click", function () {
-    const visible = panelClienteNuevo.style.display !== "none";
-    if (visible) {
-      panelClienteNuevo.style.display = "none";
-      inputClienteNuevo.value = "0";
-      btnToggleCliente.textContent = "Nuevo cliente";
-    } else {
-      panelClienteNuevo.style.display = "block";
-      inputClienteNuevo.value = "1";
-      if (selectCliente) {
-        selectCliente.value = "";
-      }
-      btnToggleCliente.textContent = "Cancelar alta rápida";
-    }
-  });
-}
-</script>
+{% block extra_js %}
+  <script src="{% static 'js/pos.js' %}"></script>
 {% endblock %}

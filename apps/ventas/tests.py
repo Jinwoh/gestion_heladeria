@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.caja.models import Caja, CajaSesion, MovimientoCaja
@@ -127,3 +128,78 @@ class VentaServiceTests(TestCase):
                 items=[{"producto_id": self.producto.id, "cantidad": 1}],
                 pagos=[{"metodo_pago": VentaPago.MetodoPago.EFECTIVO, "monto": "100.001"}],
             )
+
+
+class PosCartApiTests(TestCase):
+    def setUp(self):
+        self.usuario = get_user_model().objects.create_superuser(
+            "admin-pos", password="segura-123"
+        )
+        self.caja = Caja.objects.create(numero="POS-1")
+        self.caja.usuarios_habilitados.add(self.usuario)
+        abrir_caja(
+            usuario=self.usuario,
+            caja=self.caja,
+            monto_apertura=Decimal("0"),
+        )
+        categoria = Categoria.objects.create(nombre="Postres")
+        self.producto = Producto.objects.create(
+            categoria=categoria,
+            nombre="Helado familiar",
+            precio=Decimal("19500"),
+        )
+        Stock.objects.filter(producto=self.producto).update(cantidad=19)
+        self.client.force_login(self.usuario)
+        self.url = reverse("ventas:cart_api")
+
+    def ajax_post(self, data):
+        return self.client.post(
+            self.url,
+            data,
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    def test_agregar_producto_devuelve_carrito_y_stock_dinamicos(self):
+        response = self.ajax_post({
+            "action": "add",
+            "producto_id": self.producto.id,
+            "cantidad": 5,
+        })
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["total"], "97500.00")
+        self.assertEqual(payload["cart_quantities"][str(self.producto.id)], 5)
+        self.assertEqual(payload["items"][0]["stock"], 19)
+        self.assertEqual(Stock.objects.get(producto=self.producto).cantidad, 19)
+
+    def test_no_permite_superar_stock_entre_carrito_y_nueva_cantidad(self):
+        self.ajax_post({
+            "action": "add",
+            "producto_id": self.producto.id,
+            "cantidad": 18,
+        })
+        response = self.ajax_post({
+            "action": "add",
+            "producto_id": self.producto.id,
+            "cantidad": 2,
+        })
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["cart_quantities"][str(self.producto.id)], 18)
+
+    def test_render_inicial_formatea_guaranies_y_muestra_descuento(self):
+        self.ajax_post({
+            "action": "add",
+            "producto_id": self.producto.id,
+            "cantidad": 5,
+        })
+
+        response = self.client.get(reverse("ventas:pos"))
+        self.assertContains(response, "19.500Gs")
+        self.assertContains(response, "97.500Gs")
+        self.assertContains(response, "−<span class=\"stock-cart-value\">5</span>", html=False)
+        self.assertContains(response, "<span class=\"stock-remaining-value\">14</span>", html=False)

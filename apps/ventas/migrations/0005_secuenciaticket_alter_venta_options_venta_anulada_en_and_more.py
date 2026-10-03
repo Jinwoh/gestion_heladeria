@@ -6,6 +6,13 @@ from django.db import migrations, models
 from django.db.models import Max
 
 
+def asegurar_tabla_venta_pago(apps, schema_editor):
+    VentaPago = apps.get_model("ventas", "VentaPago")
+    tablas = set(schema_editor.connection.introspection.table_names())
+    if VentaPago._meta.db_table not in tablas:
+        schema_editor.create_model(VentaPago)
+
+
 def preparar_datos(apps, schema_editor):
     Venta = apps.get_model("ventas", "Venta")
     VentaPago = apps.get_model("ventas", "VentaPago")
@@ -15,6 +22,15 @@ def preparar_datos(apps, schema_editor):
     SecuenciaTicket.objects.update_or_create(
         nombre="venta", defaults={"ultimo_numero": ultimo}
     )
+
+    for venta in Venta.objects.filter(total__gt=0):
+        if not VentaPago.objects.filter(venta=venta).exists():
+            VentaPago.objects.create(
+                venta=venta,
+                metodo_pago="efectivo",
+                monto=venta.total,
+                monto_recibido=venta.total,
+            )
 
     for pago in VentaPago.objects.all():
         pago.monto_recibido = pago.monto
@@ -78,6 +94,7 @@ class Migration(migrations.Migration):
             name='motivo_anulacion',
             field=models.CharField(blank=True, max_length=255),
         ),
+        migrations.RunPython(asegurar_tabla_venta_pago, migrations.RunPython.noop),
         migrations.AddField(
             model_name='ventapago',
             name='monto_recibido',

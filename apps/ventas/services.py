@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.productos.models import Producto
+from apps.inventario.models import MovimientoStock
 from apps.inventario.services import restar_stock, sumar_stock
 from apps.caja.models import CajaSesion, MovimientoCaja
 
@@ -62,6 +63,7 @@ def crear_venta(*, usuario, items, pagos, cliente=None, cliente_data=None):
     productos = Producto.objects.filter(
         id__in=[i["producto_id"] for i in clean_items],
         activo=True,
+        tipo__in=[Producto.Tipo.PRODUCTO_REVENTA, Producto.Tipo.PRODUCTO_ELABORADO],
     )
     productos_map = {p.id: p for p in productos}
 
@@ -125,6 +127,9 @@ def crear_venta(*, usuario, items, pagos, cliente=None, cliente_data=None):
             cantidad=cantidad,
             usuario=usuario,
             motivo=f"Venta {venta.id}",
+            tipo=MovimientoStock.Tipo.VENTA,
+            referencia_tipo="venta",
+            referencia_id=venta.id,
         )
 
         VentaDetalle.objects.create(
@@ -216,6 +221,9 @@ def anular_venta(*, venta: Venta, usuario, motivo: str) -> Venta:
             cantidad=detalle.cantidad,
             usuario=usuario,
             motivo=f"Anulación de venta {venta.id}",
+            tipo=MovimientoStock.Tipo.ANULACION,
+            referencia_tipo="venta",
+            referencia_id=venta.id,
         )
 
     for pago in venta.pagos.all():

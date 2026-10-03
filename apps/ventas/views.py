@@ -6,8 +6,10 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST
 
 from apps.caja.services import get_caja_abierta
 from apps.inventario.models import Stock
@@ -50,7 +52,91 @@ def _get_stock_disponible(producto_id, stock_map):
     if stock_disponible is None:
         stock_item = Stock.objects.filter(producto_id=producto_id).first()
         stock_disponible = stock_item.cantidad if stock_item else 0
+        stock_map[producto_id] = stock_disponible
     return stock_disponible
+
+
+def _build_cart_state(cart, productos_map, stock_map):
+    carrito_items = []
+    carrito_total = Decimal("0.00")
+    cart_quantities = {}
+
+    for producto_id_str, cantidad in cart.items():
+        try:
+            producto_id = int(producto_id_str)
+            cantidad_int = int(cantidad)
+        except (TypeError, ValueError):
+            continue
+
+        producto = productos_map.get(producto_id)
+        if not producto or cantidad_int <= 0:
+            continue
+
+        precio = producto.precio
+        subtotal = precio * cantidad_int
+        stock_valor = _get_stock_disponible(producto.id, stock_map)
+        carrito_total += subtotal
+        cart_quantities[producto.id] = cantidad_int
+
+        carrito_items.append({
+            "producto_id": producto.id,
+            "nombre": producto.nombre,
+            "categoria": producto.categoria.nombre if producto.categoria else "-",
+            "precio": precio,
+            "cantidad": cantidad_int,
+            "subtotal": subtotal,
+            "stock": stock_valor,
+        })
+
+    return {
+        "carrito_items": carrito_items,
+        "carrito_total": carrito_total,
+        "cart_quantities": cart_quantities,
+    }
+
+
+def _is_ajax(request):
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def _cart_action_response(
+    request,
+    *,
+    cart,
+    productos_map,
+    stock_map,
+    success,
+    message,
+    level="success",
+):
+    if not _is_ajax(request):
+        getattr(messages, level)(request, message)
+        return redirect("ventas:pos")
+
+    state = _build_cart_state(cart, productos_map, stock_map)
+    payload = {
+        "ok": success,
+        "message": message,
+        "level": level,
+        "items": [
+            {
+                "producto_id": item["producto_id"],
+                "nombre": item["nombre"],
+                "categoria": item["categoria"],
+                "precio": str(item["precio"]),
+                "cantidad": item["cantidad"],
+                "subtotal": str(item["subtotal"]),
+                "stock": int(item["stock"]) if item["stock"] == item["stock"].to_integral_value() else float(item["stock"]),
+            }
+            for item in state["carrito_items"]
+        ],
+        "total": str(state["carrito_total"]),
+        "cart_quantities": {
+            str(producto_id): cantidad
+            for producto_id, cantidad in state["cart_quantities"].items()
+        },
+    }
+    return JsonResponse(payload, status=200 if success else 400)
 
 
 @login_required
@@ -63,7 +149,10 @@ def pos_view(request):
     categoria_id = request.GET.get("categoria", "").strip()
 
     productos_qs = (
-        Producto.objects.filter(activo=True)
+        Producto.objects.filter(
+            activo=True,
+            tipo__in=[Producto.Tipo.PRODUCTO_REVENTA, Producto.Tipo.PRODUCTO_ELABORADO],
+        )
         .select_related("categoria")
         .prefetch_related("stock")
         .order_by("categoria__orden", "categoria__nombre", "nombre")
@@ -81,7 +170,10 @@ def pos_view(request):
     productos = list(productos_qs)
 
     categorias = (
-        Producto.objects.filter(activo=True)
+        Producto.objects.filter(
+            activo=True,
+            tipo__in=[Producto.Tipo.PRODUCTO_REVENTA, Producto.Tipo.PRODUCTO_ELABORADO],
+        )
         .select_related("categoria")
         .values_list("categoria_id", "categoria__nombre")
         .distinct()
@@ -95,7 +187,10 @@ def pos_view(request):
 
     productos_map = {
         p.id: p
-        for p in Producto.objects.filter(activo=True).select_related("categoria")
+        for p in Producto.objects.filter(
+            activo=True,
+            tipo__in=[Producto.Tipo.PRODUCTO_REVENTA, Producto.Tipo.PRODUCTO_ELABORADO],
+        ).select_related("categoria")
     }
 
     cart = _get_cart(request.session)
@@ -296,42 +391,22 @@ def pos_view(request):
 
     cart = _get_cart(request.session)
 
-    carrito_items = []
-    carrito_total = Decimal("0.00")
-
-    for producto_id_str, cantidad in cart.items():
-        try:
-            producto_id = int(producto_id_str)
-            cantidad_int = int(cantidad)
-        except (TypeError, ValueError):
-            continue
-
-        producto = productos_map.get(producto_id)
-        if not producto or cantidad_int <= 0:
-            continue
-
-        precio = producto.precio
-        subtotal = precio * cantidad_int
-        carrito_total += subtotal
-
-        stock_valor = _get_stock_disponible(producto.id, stock_map)
-
-        carrito_items.append({
-            "producto_id": producto.id,
-            "nombre": producto.nombre,
-            "categoria": producto.categoria.nombre if producto.categoria else "-",
-            "precio": precio,
-            "cantidad": cantidad_int,
-            "subtotal": subtotal,
-            "stock": stock_valor,
-        })
+    cart_state = _build_cart_state(cart, productos_map, stock_map)
+    stock_remaining_map = {
+        producto.id: max(
+            _get_stock_disponible(producto.id, stock_map)
+            - cart_state["cart_quantities"].get(producto.id, 0),
+            0,
+        )
+        for producto in productos
+    }
 
     ctx = {
         "caja": caja,
         "productos": productos,
         "stock_map": stock_map,
-        "carrito_items": carrito_items,
-        "carrito_total": carrito_total,
+        "stock_remaining_map": stock_remaining_map,
+        **cart_state,
         "categorias": categorias,
         "clientes": clientes,
         "q": q,
@@ -341,13 +416,171 @@ def pos_view(request):
 
 
 @login_required
+@never_cache
+@permission_required("ventas.add_venta", raise_exception=True)
+@require_POST
+def pos_cart_api(request):
+    productos_map = {
+        producto.id: producto
+        for producto in Producto.objects.filter(
+            activo=True,
+            tipo__in=[Producto.Tipo.PRODUCTO_REVENTA, Producto.Tipo.PRODUCTO_ELABORADO],
+        ).select_related("categoria")
+    }
+    stock_map = {
+        stock.producto_id: stock.cantidad
+        for stock in Stock.objects.filter(producto_id__in=productos_map)
+    }
+    cart = _get_cart(request.session)
+
+    if not get_caja_abierta(request.user):
+        return _cart_action_response(
+            request,
+            cart=cart,
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=False,
+            message="La caja está cerrada. Debes abrir una caja antes de operar en el POS.",
+            level="error",
+        )
+
+    action = request.POST.get("action")
+    if action == "clear":
+        _clear_cart(request.session)
+        return _cart_action_response(
+            request,
+            cart={},
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=True,
+            message="El carrito fue vaciado.",
+            level="warning",
+        )
+
+    try:
+        producto_id = int(request.POST.get("producto_id"))
+    except (TypeError, ValueError):
+        return _cart_action_response(
+            request,
+            cart=cart,
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=False,
+            message="Producto inválido.",
+            level="error",
+        )
+
+    producto = productos_map.get(producto_id)
+    if not producto:
+        cart.pop(str(producto_id), None)
+        _save_cart(request.session, cart)
+        return _cart_action_response(
+            request,
+            cart=cart,
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=False,
+            message="El producto no existe o ya no está activo.",
+            level="error",
+        )
+
+    if action == "remove":
+        cart.pop(str(producto_id), None)
+        _save_cart(request.session, cart)
+        return _cart_action_response(
+            request,
+            cart=cart,
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=True,
+            message=f"Se quitó '{producto.nombre}' del carrito.",
+            level="info",
+        )
+
+    try:
+        cantidad = int(request.POST.get("cantidad", 1 if action == "add" else 0))
+    except (TypeError, ValueError):
+        return _cart_action_response(
+            request,
+            cart=cart,
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=False,
+            message="La cantidad ingresada no es válida.",
+            level="error",
+        )
+
+    if action == "update" and cantidad <= 0:
+        cart.pop(str(producto_id), None)
+        _save_cart(request.session, cart)
+        return _cart_action_response(
+            request,
+            cart=cart,
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=True,
+            message=f"Se quitó '{producto.nombre}' del carrito.",
+            level="info",
+        )
+
+    if action not in {"add", "update"} or cantidad <= 0:
+        return _cart_action_response(
+            request,
+            cart=cart,
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=False,
+            message="La acción o la cantidad no es válida.",
+            level="error",
+        )
+
+    cantidad_actual = int(cart.get(str(producto_id), 0))
+    nueva_cantidad = cantidad_actual + cantidad if action == "add" else cantidad
+    stock_disponible = _get_stock_disponible(producto_id, stock_map)
+    if nueva_cantidad > stock_disponible:
+        disponible_para_agregar = max(stock_disponible - cantidad_actual, 0)
+        message = (
+            f"'{producto.nombre}' no tiene existencias disponibles."
+            if stock_disponible <= 0
+            else f"Stock insuficiente para '{producto.nombre}'. "
+                 f"Disponible para agregar: {disponible_para_agregar}."
+        )
+        return _cart_action_response(
+            request,
+            cart=cart,
+            productos_map=productos_map,
+            stock_map=stock_map,
+            success=False,
+            message=message,
+            level="warning",
+        )
+
+    cart[str(producto_id)] = nueva_cantidad
+    _save_cart(request.session, cart)
+    return _cart_action_response(
+        request,
+        cart=cart,
+        productos_map=productos_map,
+        stock_map=stock_map,
+        success=True,
+        message=(
+            f"Se agregó '{producto.nombre}' al carrito."
+            if action == "add"
+            else f"Se actualizó '{producto.nombre}' en el carrito."
+        ),
+    )
+
+
+@login_required
 @permission_required("productos.view_producto", raise_exception=True)
 def lista_productos(request):
     q = request.GET.get("q", "").strip()
     categoria_id = request.GET.get("categoria", "").strip()
     estado = request.GET.get("estado", "activos").strip()
 
-    productos_qs = Producto.objects.select_related("categoria").order_by(
+    productos_qs = Producto.objects.filter(
+        tipo__in=[Producto.Tipo.PRODUCTO_REVENTA, Producto.Tipo.PRODUCTO_ELABORADO],
+    ).select_related("categoria").order_by(
         "categoria__orden",
         "categoria__nombre",
         "nombre",
@@ -368,7 +601,9 @@ def lista_productos(request):
         productos_qs = productos_qs.filter(activo=False)
 
     categorias = (
-        Producto.objects.select_related("categoria")
+        Producto.objects.filter(
+            tipo__in=[Producto.Tipo.PRODUCTO_REVENTA, Producto.Tipo.PRODUCTO_ELABORADO],
+        ).select_related("categoria")
         .values_list("categoria_id", "categoria__nombre")
         .distinct()
         .order_by("categoria__nombre")

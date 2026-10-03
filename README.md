@@ -1,6 +1,6 @@
 # Sistema de gestión de heladería
 
-Aplicación Django para punto de venta, inventario, caja, clientes y reportes.
+Aplicación Django para punto de venta, inventario, compras, proveedores, caja, clientes y reportes.
 
 ## Desarrollo
 
@@ -39,7 +39,7 @@ No debe desplegarse `db.sqlite3`, `media/` ni un archivo `.env` desde Git. Los a
 ## Roles
 
 - `Cajero`: opera su caja, POS, clientes y sus propios reportes.
-- `Supervisor`: además consulta reportes globales, ajusta inventario y anula ventas de cajas aún abiertas.
+- `Supervisor`: además gestiona proveedores y órdenes de compra, recibe mercadería, consulta reportes globales, ajusta inventario y anula ventas de cajas aún abiertas.
 - `Administrador`: recibe todos los permisos disponibles.
 
 El comando `crear_roles_base` agrega los permisos base sin borrar personalizaciones. Use `--reset` únicamente cuando desee reemplazarlas deliberadamente.
@@ -50,4 +50,6 @@ El comando `crear_roles_base` agrega los permisos base sin borrar personalizacio
 - `VentaPago.monto_recibido` conserva el importe entregado por el cliente.
 - El vuelto solo puede originarse en efectivo.
 - Una anulación restaura stock y registra contramovimientos; solo se admite mientras la sesión original permanezca abierta.
-- Toda modificación de existencias debe pasar por la pantalla de Inventario para conservar la auditoría.
+- Las entradas normales de mercadería se generan al confirmar una recepción de orden de compra.
+- Los ajustes manuales exigen un motivo y registran stock anterior y resultante.
+- Toda modificación de existencias pasa por los servicios centralizados de Inventario y genera auditoría.

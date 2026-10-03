@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Ajuste de stock{% endblock %}
+{% block content %}<div class="grid">
+<section class="card"><h1>Ajuste de stock</h1><p class="muted">Ingresá el conteo físico real. Las compras normales deben recibirse desde una orden de compra.</p>
+<form method="post" style="margin-top:18px">{% csrf_token %}
+  <div class="field"><label for="{{ form.producto.id_for_label }}">{{ form.producto.label }}</label>{{ form.producto }}{{ form.producto.errors }}
+    <div class="stock-current-card is-hidden" id="stock-actual" aria-live="polite"><span class="stock-current-label">Stock del sistema</span><strong id="stock-actual-valor">0</strong> <span id="stock-actual-unidad"></span></div>
+  </div>
+  <div class="field"><label for="{{ form.cantidad.id_for_label }}">{{ form.cantidad.label }}</label>{{ form.cantidad }}{{ form.cantidad.errors }}<small class="muted">El sistema calculará automáticamente si el ajuste es positivo o negativo.</small></div>
+  <div class="field"><label for="{{ form.motivo.id_for_label }}">{{ form.motivo.label }}</label>{{ form.motivo }}{{ form.motivo.errors }}</div>
+  {{ form.non_field_errors }}
+  <div class="row"><button class="btn primary">Registrar ajuste</button><a class="btn" href="{% url 'inventario:stock' %}">Ver inventario</a></div>
+</form></section>
+<aside class="card"><h2>Control auditado</h2><p class="muted">Cada ajuste registra usuario, fecha, stock anterior, diferencia y stock resultante. No utilices esta pantalla para ingresos de proveedores.</p>{% if perms.inventario.add_ordencompra %}<a class="btn" style="margin-top:14px" href="{% url 'inventario:orden_crear' %}">Crear orden de compra</a>{% endif %}</aside>
+</div>{{ stock_por_producto|json_script:"stock-por-producto" }}{% endblock %}
+{% block extra_js %}<script src="{% static 'js/inventario-movimiento.js' %}"></script>{% endblock %}

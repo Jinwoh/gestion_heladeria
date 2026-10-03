@@ -95,7 +95,7 @@
           </div>
           {% endif %}
 
-          {% if perms.inventario.view_stock or perms.clientes.view_cliente %}
+          {% if perms.inventario.view_stock or perms.inventario.change_stock or perms.inventario.view_proveedor or perms.productos.view_producto or perms.clientes.view_cliente %}
           <div class="nav-group">
             <button type="button" class="nav-toggle">
               <span class="nav-toggle-content"><span>Gestión</span></span>
@@ -105,9 +105,34 @@
               {% if perms.inventario.view_stock %}
                 <a href="{% url 'inventario:stock' %}" class="dropdown-item">Inventario</a>
               {% endif %}
+              {% if perms.productos.view_producto %}
+                <a href="{% url 'productos:lista' %}" class="dropdown-item">Catálogo de artículos</a>
+              {% endif %}
+              {% if perms.inventario.change_stock %}
+                <a href="{% url 'inventario:movimiento' %}" class="dropdown-item">Ajuste de stock</a>
+              {% endif %}
+              {% if perms.inventario.view_movimientostock %}
+                <a href="{% url 'inventario:movimientos' %}" class="dropdown-item">Movimientos de stock</a>
+              {% endif %}
+              {% if perms.inventario.view_proveedor %}
+                <a href="{% url 'inventario:proveedores' %}" class="dropdown-item">Proveedores</a>
+              {% endif %}
               {% if perms.clientes.view_cliente %}
                 <a href="{% url 'clientes:lista' %}" class="dropdown-item">Clientes</a>
               {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if perms.inventario.view_ordencompra or perms.inventario.add_ordencompra or perms.inventario.view_recepcioncompra %}
+          <div class="nav-group">
+            <button type="button" class="nav-toggle">
+              <span class="nav-toggle-content"><span>Compras</span></span>
+              <span class="caret">▼</span>
+            </button>
+            <div class="dropdown-menu">
+              {% if perms.inventario.view_ordencompra %}<a href="{% url 'inventario:ordenes' %}" class="dropdown-item">Órdenes de compra</a>{% endif %}
+              {% if perms.inventario.view_recepcioncompra %}<a href="{% url 'inventario:recepciones' %}" class="dropdown-item">Recepciones de OC</a>{% endif %}
             </div>
           </div>
           {% endif %}
